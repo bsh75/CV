@@ -19,44 +19,34 @@ def init_file():
     return cap
 
 def main():
-    # Open file and get width and height of frame
-    capR = init_file_raw()
+    run = True
+    switch = True
 
-    while capR.isOpened():
+    while run:
+        # Read the raw Y16 data from the camera
+        if switch:
+            cap = init_file_raw()
+        else:
+            cap = init_file()
 
-        ret, frame = capR.read()
-
-        if not ret:
-            break
-        
-        # Show the frame in the window with threshold trackbars
-        cv2.imshow('Norm', frame)
-        
-        # Close the script if q is pressed.
-        # Note that the delay in cv2.waitKey affects how quickly the video will play on screen.
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
-
-    # Release the video file, and close the GUI.
-    capR.release()
-
-
-    cap = init_file()
-    
-    while cap.isOpened():
-
-        ret, frame = cap.read()
-
-        if not ret:
-            break
-        
-        # Show the frame in the window with threshold trackbars
-        cv2.imshow('Norm', frame)
-        
-        # Close the script if q is pressed.
-        # Note that the delay in cv2.waitKey affects how quickly the video will play on screen.
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            # Show the frame in the window
+            cv2.imshow('Norm', frame)
+            
+            # Close the script if q is pressed.
+            # Note that the delay in cv2.waitKey affects how quickly the video will play on screen.
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                run = False
+                break
+            # Switch from Y16 to normal and vice versa when 's' key is pressed
+            if cv2.waitKey(10) & 0xFF == ord('s'):
+                switch = not switch
+                break
+        # Release the video file, and close the GUI.
+        cap.release()
 
 
     cv2.destroyAllWindows()
