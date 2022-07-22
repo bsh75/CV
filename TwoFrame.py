@@ -4,35 +4,54 @@ Written by Brett Hockey"""
 import cv2
 import numpy as np
 
-def init_file_raw():
-    """Load the video file"""
+def init_file(raw):
+    """Load the video file depending on what mode is required"""
     device_index = 1 # for Boson in USB port
-    capR = cv2.VideoCapture(device_index, cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
-    capR.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
-    capR.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    capR.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
-    capR.set(cv2.CAP_PROP_CONVERT_RGB, 0)
-    return capR
-
-def init_file():
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    if raw:
+        # Load data as Y16 raw
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
+        
     return cap
 
+def drawMaxMin(frame):
+    """Find the maximum and minimum values in the frame and draw them"""
+    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(frame)
+    cv2.circle(frame, maxLoc, 2, (255, 0, 0), 1)
+    cv2.putText(frame, str(maxVal), (maxLoc[0]+10, maxLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    cv2.circle(frame, minLoc, 2, (255, 0, 0), 1)
+    cv2.putText(frame, str(minVal), (minLoc[0]+10, minLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    return frame
+
 def main():
+    """Main function which switches between raw and normal feeds"""
     run = True
-    switch = True
+    raw = True
+    save = True
 
     while run:
         # Read the raw Y16 data from the camera
-        if switch:
-            cap = init_file_raw()
-        else:
-            cap = init_file()
+        cap = init_file(raw)
+        if save:
+            if raw:
+                out = cv2.VideoWriter('RawVid.mp4', -1, 20.0, (640,512))
+            else:
+                out = cv2.VideoWriter('NormVid.mp4', -1, 20.0, (640,512))
 
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
+
+            ######## ADD CV CODE BELOW ########
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+            frame = drawMaxMin(frame)
+
+            ###################################
+            if save:
+                out.write(frame)
             # Show the frame in the window
             cv2.imshow('Norm', frame)
             
@@ -43,10 +62,11 @@ def main():
                 break
             # Switch from Y16 to normal and vice versa when 's' key is pressed
             if cv2.waitKey(10) & 0xFF == ord('s'):
-                switch = not switch
+                raw = not raw
                 break
         # Release the video file, and close the GUI.
         cap.release()
+        out.release()
 
 
     cv2.destroyAllWindows()
