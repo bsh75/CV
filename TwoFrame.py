@@ -1,4 +1,5 @@
-"""Computer vision code for thermal camera in wildfire drone applications 
+"""CV Code for gathering data from tests to later be developed
+Allows for switching between video feed modes
 Written by Brett Hockey"""
 
 import cv2
@@ -30,6 +31,7 @@ def main():
     run = True
     raw = True
     save = True
+    rawThresh = 110
 
     while run:
         # Read the raw Y16 data from the camera
@@ -47,7 +49,7 @@ def main():
 
             ######## ADD CV CODE BELOW ########
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
-            frame = drawMaxMin(frame)
+            # frame = drawMaxMin(frame)
 
             ###################################
             if save:

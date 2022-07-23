@@ -1,17 +1,29 @@
-"""Computer vision code for thermal camera in wildfire drone applications 
+"""CV code containing all the relevant functions that could be used in main
 Written by Brett Hockey"""
 
 import cv2
 import numpy as np
 import time
 
+def init_file_raw():
+    """Load the video file"""
+    device_index = 1 # for Boson in USB port
+    cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
+    cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)  
+    return cap
+
 def init_file():
     """Load the video file"""
-    cap = cv2.VideoCapture('./Data/Snip.avi')  # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+    cap = cv2.VideoCapture(1)  # Chnge to 0 instead of filename to get from camera
+    # get the frame width and height
+    
     return cap
 
 def contourN(frame, minA, N):
-    """Find the N largest contours qithin the frame"""
+    """Find the N largest contours within the frame"""
     C_list = []
     A_list = []
     AC_list = []
@@ -101,18 +113,73 @@ def drawRefFrame(frame, width, height):
 
 def distanceBetween(targetLoc, width, height, camAngleX, camAngleY):
     """Approximates distance between points"""
-    h = getDroneHeight()
-    spanX = 2 * h * np.tan(camAngleX)
-    spanY = 2 * h * np.tan(camAngleY)
-    dy = spanX*(targetLoc[1][1]-targetLoc[0][1])/width
-    dx = spanY*(targetLoc[1][0]-targetLoc[0][0])/height
-    d = round(np.sqrt(dx**2 + dy**2), 1)
+    if len(targetLoc) >= 2:
+        h = getDroneHeight()
+        spanX = 2 * h * np.tan(camAngleX)
+        spanY = 2 * h * np.tan(camAngleY)
+        dy = spanX*(targetLoc[1][1]-targetLoc[0][1])/width
+        dx = spanY*(targetLoc[1][0]-targetLoc[0][0])/height
+        d = round(np.sqrt(dx**2 + dy**2), 1)
     return d
 
+def multiTarget(ze_frame, blurKsize, dropWeight, radius):
+    maxSum = 0
+    targetLoc = []
+    targetAreaIntensity = []
+    j = 0
+    while maxSum <= dropWeight:
+        maxLoc, maxVal = targetPoint(ze_frame, blurKsize)
+        targetLoc.append(maxLoc)
+        targetAreaIntensity.append(maxVal)
+        maxSum += maxVal
+        cv2.circle(ze_frame, maxLoc, radius, (0, 0, 255), cv2.FILLED)
+        j += 1
+    return targetLoc, targetAreaIntensity
+
+def draw(frameOut, targetLoc, dGuess, theta, targetAreaIntensity, centerLoc, width, height):
+    for j in range(0, len(targetLoc)):
+        cv2.circle(frameOut, targetLoc[j], 5, (255, 0, 0), 2)
+        cv2.putText(frameOut, str(dGuess[j])+'m '+str(round(theta[j]*180/np.pi, 1))+'deg', (targetLoc[j][0]+30, targetLoc[j][1]+0),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+        cv2.putText(frameOut, 'Weighting: '+str(targetAreaIntensity[j]), (targetLoc[j][0]+30, targetLoc[j][1]+15),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+        cv2.line(frameOut, centerLoc, targetLoc[j], (255, 0, 0), 2)
+    frameOut = drawRefFrame(frameOut, width, height)
+
+def geolocate(targetLoc, centerLoc, camAngleX, camAngleY, width, height):
+    dxP = []
+    dyP = []
+    coord = []
+    theta = []
+    dGuess =[]
+
+    for k in range(0, len(targetLoc)):
+        dxP.append(targetLoc[k][0] - centerLoc[0])
+        dyP.append(-(targetLoc[k][1] - centerLoc[1]))
+        coord.append((dxP[k], dyP[k])) # Coordinates of target point relative to centre
+        dGuess.append(distApprox(coord[k], width, height, camAngleX, camAngleY))
+        # Get angle and approx distance
+        theta.append(getAngle(coord[k])) # angle that the target point is away from right infront
+    return dGuess, theta
+
+def tempEst(targetLoc, frame):
+    T = []
+    for i in range(0, len(targetLoc)):
+        K = 0.01 * frame[targetLoc[i][1], targetLoc[i][0]]
+        T.append(K - 273.15)
+    return T
+
+def drawMaxMin(frame):
+    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(frame)
+    cv2.circle(frame, maxLoc, 5, (255, 0, 0), 2)
+    cv2.putText(frame, str(maxVal), (maxLoc[0]+30, maxLoc[1]+15),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    cv2.circle(frame, minLoc, 5, (255, 0, 0), 2)
+    cv2.putText(frame, str(minVal), (minLoc[0]+30, minLoc[1]+15),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    return frame
 
 def main():
     # Open file and get width and height of frame
-    cap = init_file()
+    cap = init_file_raw()
+    #cap = init_file()
+
     width = int(cap.get(3))
     height = int(cap.get(4))
     centerLoc = (int(width/2), int(height/2))
@@ -121,97 +188,53 @@ def main():
     camAngleY = 50/2 * np.pi/180 
 
     # Selection for threshold values
-    threshold1 = 100 # Exact value will be determined during later testing
-    minA = 200 # Minimum size of any contour
+    threshold1 = 100 ### Exact value will be determined during later testing (MAY NEED DYNAMIC CALIBRATION)
+    minA = 200 ### Nessecary? (WIll need dynamic calibration)
     N = 5 # Largest N contours will be used
 
-    # detector = blob_init()
+    # Open Close Kernel
     OC_kernel = np.ones((10, 10), np.int8)
-    
-    elapsed_time = []
 
-    dropWeight = 350
+    # Relates to capacity of the drop
+    dropWeight = 350 ### Will need  calibration
+
     while cap.isOpened():
-        # Read frames from file until no more
-        start_time = time.time()
+
         ret, frame = cap.read()
-        #frame = cv2.resize(frame, None, None, fx=0.5, fy=0.5)
         if not ret:
             break
         
-        # Grey & Blur
-        frame = cv2.GaussianBlur(frame, (5, 5), 0) # Apply gaussian filtering for blur
-        frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert the frame to grayscale.
-        
         # Thresholding to zero to set cooler areas to 0 and keep the rest
-        retval, ze_frame = cv2.threshold(frameG, threshold1, 9999, cv2.THRESH_TOZERO)
-        # Binary Thresholds
-        retval, bin_frame = cv2.threshold(frameG, threshold1, 9999, cv2.THRESH_BINARY)
-
-        # Opening/Closing to remove small white/black dots in frame to save computation on Contours
-        OC_frame = open_close(bin_frame, OC_kernel)
-
-        # Find the N maximum contours
-        areas, maxContours = contourN(OC_frame, minA, N)
+        retval, ze_frame = cv2.threshold(frame, threshold1, 9999, cv2.THRESH_TOZERO)
 
         # Blur kernel determination
-        blurKsize = int(getBlurSize())
+        blurKsize = int(getBlurSize()) ### make this function
         radius = int(blurKsize/2)
 
-        # Check whether the size of the summed target point brightest values
-        maxSum = 0
-        targetLoc = []
-        targetAreaIntensity = []
-        j = 0
-        while maxSum <= dropWeight and j < len(maxContours):
-            maxLoc, maxVal = targetPoint(ze_frame, blurKsize)
-            
-            if cv2.pointPolygonTest(maxContours[j], maxLoc, True):
-                targetLoc.append(maxLoc)
-                targetAreaIntensity.append(maxVal)
-                maxSum += maxVal
-                cv2.circle(ze_frame, maxLoc, radius, (0, 0, 255), cv2.FILLED)
-            j += 1
-        
-        frameOut = ze_frame
-        
-        for j in range(0, len(targetLoc)):
-            cv2.circle(frameOut, targetLoc[j], 5, (255, 0, 0), 2)
-        
-        if len(targetLoc) >= 2:
-            d = distanceBetween(targetLoc, width, height, camAngleX, camAngleY)
-            print(d)
+        # Find the brightest n targets until estimated WATERRUNOUT
+        targetLoc, targetAreaIntensity = multiTarget(ze_frame, blurKsize, dropWeight, radius)
+        frameOut = frame
+        T = tempEst(targetLoc, frame)
 
-        
-        # Find distance between center and target in terms of pixels
-        dxP = []
-        dyP = []
-        coord = []
-        theta = []
+        frame = drawMaxMin(frame)
 
-        for k in range(0, len(targetLoc)):
-            dxP.append(targetLoc[k][0] - centerLoc[0])
-            dyP.append(-(targetLoc[k][1] - centerLoc[1]))
-            coord.append((dxP[k], dyP[k])) # Coordinates of target point relative to centre
-            dGuess = distApprox(coord[k], width, height, camAngleX, camAngleY)
-            # Get angle and approx distance
-            theta.append(getAngle(coord[k])) # angle that the target point is away from right infront
-            cv2.putText(frameOut, str(dGuess)+'m '+str(round(theta[k]*180/np.pi, 1))+'deg', (targetLoc[k][0]+30, targetLoc[k][1]+0),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-            cv2.putText(frameOut, 'Weighting: '+str(targetAreaIntensity[k]), (targetLoc[k][0]+30, targetLoc[k][1]+15),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-            cv2.line(frameOut, centerLoc, targetLoc[k], (255, 0, 0), 2)
-        
-        frameOut = drawRefFrame(frameOut, width, height)     
-        
+        # Find angles and estimate distances between center and targets
+        dGuess, theta = geolocate(targetLoc, centerLoc, camAngleX, camAngleY, width, height)
+
+        # Draw information on the frame
+        #draw(frameOut, targetLoc, dGuess, theta, T, centerLoc, width, height)
+
         # Show the frame in the window with threshold trackbars
-        cv2.imshow('Threshold to Zero', frameOut) 
-        current_time = time.time()
-        elapsed_time.append(current_time - start_time)
+        cv2.imshow('Y16', frameOut) 
+        #ret, frame1 = cap1.read()
+        # frame1 = frame
+        #cv2.imshow('Norm', frame1) 
         
         # Close the script if q is pressed.
         # Note that the delay in cv2.waitKey affects how quickly the video will play on screen.
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
-    print(sum(elapsed_time)/len(elapsed_time))        
+
     # Release the video file, and close the GUI.
     cap.release()
     cv2.destroyAllWindows()
