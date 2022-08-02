@@ -11,32 +11,39 @@ import numpy as np
 
 def init_file():
     """Load the video file depending on what mode is required"""
-    device_index = 1 # for Boson in USB port
-    cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+    device_index = './Data/Snip.avi' # for Boson in USB port
+    cap = cv2.VideoCapture(device_index)
+    #cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
+    #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
     return cap
 
 def MaxMin(frame):
     """Find the maximum and minimum values in the frame and draw them"""
     minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(frame)
-    cv2.circle(frame, maxLoc, 2, (255, 0, 0), 1)
+    '''cv2.circle(frame, maxLoc, 2, (255, 0, 0), 1)
     cv2.putText(frame, str(maxVal), (maxLoc[0]+10, maxLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
     cv2.circle(frame, minLoc, 2, (255, 0, 0), 1)
-    cv2.putText(frame, str(minVal), (minLoc[0]+10, minLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    cv2.putText(frame, str(minVal), (minLoc[0]+10, minLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)'''
     return frame, maxVal, maxLoc
 
 def getDroneHeight():
     """Returns the height of the drone above point in center of frame
     in practice will be aquired from drone onboard computer"""
-    height = 74
+    height = 8
     return height
 
 def getBlurSize():
     """Function will later be developed to use the drone height to specifiy kernel size"""
-    blurSize = 6000/getDroneHeight() # 20000 chosen arbritrarily, but will be calibrated during testing
-    return blurSize
+    #fov = 50*np.pi/180 #rad
+    diameter = 0.5 #m
+    height = getDroneHeight() #m
+    #d = int(640*diameter/(height*np.tan(fov)))
+
+    HFOV = 88.3/100*height # From data provided online
+    d = int(640*diameter/HFOV) # Ratio equivalence
+    return d
 
 def targetPoint(frame, blurKsize):
     """Finds the brightest point in the frame averaged by the a circular kernal with size of spread of water"""
@@ -44,7 +51,7 @@ def targetPoint(frame, blurKsize):
     circ_kern = circ_kern/sum(sum(circ_kern))
     frame_CB = cv2.filter2D(frame,-1,circ_kern) # fliter using the circular kernel
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frame_CB)
-    return maxLoc, maxVal
+    return maxLoc
 
 def getAngle(coord):
     """Returns the angle to the target point with 0degrees being directly infront, +ve 0-180 on the right and -ve 0-180 on the left"""
@@ -76,31 +83,70 @@ def distApprox(coord, width, height, camAngleX, camAngleY):
     dGuess = round(np.sqrt(dxGuess**2 + dyGuess**2), 1)
     return dGuess
 
+def medianFilter(targetLocList):
+    """Median filer on the target location list"""
+    # Still not the greatest with large buffers
+    targetLocListX = [i[0] for i in targetLocList]
+    targetLocListY = [i[1] for i in targetLocList]
+    targetLocListX.sort()
+    targetLocListY.sort()
+    targetLoc = (targetLocListX[int(len(targetLocListX)/2)], targetLocListY[int(len(targetLocListY)/2)])
+    return targetLoc
+
 def main():
     """Main function which switches between raw and normal feeds"""
     save = False
     rawThresh = 110
-    target = False
+    
+    width = 640
+    height = 512
 
+    N = 3 # Must be a 
+    targetLocList = []
     # Read the raw Y16 data from the camera
     cap = init_file()
     if save:
         out = cv2.VideoWriter('RawVid.mp4', -1, 20.0, (640,512))
-        
+    
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
         ######## ADD CV PROCESSING BELOW ########
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frameG = frame 
         frame, maxVal, maxLoc = MaxMin(frame)
         
         if maxVal > rawThresh: # Could make this depend on blurring kernal method results (height)
-            target = True
+            # Threshold first and black out then find target Loc
+            retval, frame = cv2.threshold(frame, rawThresh, 9999, cv2.THRESH_TOZERO)
+            blurKsize = getBlurSize()
+            targetLoc = targetPoint(frame, blurKsize)
+            
+            # FIFO buffer with Target Locations
+            targetLocList.append(targetLoc)
+            if len(targetLocList) > N:
+                targetLocList.pop(0)
+            
+            # Median filtering
+            targetLoc = medianFilter(targetLocList)
+
+            print(targetLoc)
+            cv2.circle(frame, targetLoc, 3, (255, 255, 255), 3)
+            cv2.circle(frame, targetLoc, blurKsize, (255, 255, 255), 2)
+
             ## Start geolocation and sending data to autopilot
             ## Also start classifying the hotspots for drop estimation
-            # could be a seperate while loop here instead of 
+            """Should also include some function which checks whether the target is within a certain 
+            distance from targets in the last x amount of frames and if it is then sweet but if it isnt 
+            then dont send this position as a coordinate, could also add functionaity such that it 
+            blacks out remaining areas around the target Area to focus on one target at a time.
+            Essentially need some median/mode filtering remove outliers or Jumps (i think that median will work best)
+            Will need to create a buffer of targetLocs that is"""
+            # If a new hotspot comes into frame then....
+            """Machine learning extension for: -improving drop quantity estimation 
+                                               -creating drop sequences for hotspots requiring multiple drops"""
 
         ###################################
         if save:
