@@ -7,7 +7,7 @@ import numpy as np
 
 def init_file(raw):
     """Load the video file depending on what mode is required"""
-    device_index = 1 # for Boson in USB port
+    device_index = 0 # for Boson in USB port
     cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -16,15 +16,6 @@ def init_file(raw):
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
         
     return cap
-
-def drawMaxMin(frame):
-    """Find the maximum and minimum values in the frame and draw them"""
-    minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(frame)
-    cv2.circle(frame, maxLoc, 2, (255, 0, 0), 1)
-    cv2.putText(frame, str(maxVal), (maxLoc[0]+10, maxLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-    cv2.circle(frame, minLoc, 2, (255, 0, 0), 1)
-    cv2.putText(frame, str(minVal), (minLoc[0]+10, minLoc[1]+5),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-    return frame
 
 def main():
     """Main function which switches between raw and normal feeds"""
@@ -37,10 +28,11 @@ def main():
         # Read the raw Y16 data from the camera
         cap = init_file(raw)
         if save:
+            fourcc = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X') # Unsure what this does atm but may be needed for Rasberry Pi
             if raw:
-                out = cv2.VideoWriter('RawVid.mp4', -1, 20.0, (640,512))
+                out = cv2.VideoWriter('RawVid.mp4', fourcc, 20.0, (640,512))
             else:
-                out = cv2.VideoWriter('NormVid.mp4', -1, 20.0, (640,512))
+                out = cv2.VideoWriter('NormVid.mp4', fourcc, 20.0, (640,512))
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -48,7 +40,7 @@ def main():
                 break
 
             ######## ADD CV CODE BELOW ########
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
             # frame = drawMaxMin(frame)
 
             ###################################
