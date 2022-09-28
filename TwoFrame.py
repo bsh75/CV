@@ -8,7 +8,7 @@ import numpy as np
 def init_file(raw):
     """Load the video file depending on what mode is required"""
     device_index = 0 # for Boson in USB port
-    cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+    cap = cv2.VideoCapture(device_index) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     if raw:
@@ -23,16 +23,17 @@ def main():
     raw = True
     save = True
     rawThresh = 110
-
+    print("s: Switches Video Type, q: Quits Program")
+    
     while run:
         # Read the raw Y16 data from the camera
         cap = init_file(raw)
         if save:
-            fourcc = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X') # Unsure what this does atm but may be needed for Rasberry Pi
+            fourcc = cv2.VideoWriter_fourcc(*'DIVX') # or ('D', 'I', 'V', 'X')Unsure what this does atm but may be needed for Rasberry Pi
             if raw:
-                out = cv2.VideoWriter('RawVid.mp4', fourcc, 20.0, (640,512))
+                out = cv2.VideoWriter('RawVid.avi', fourcc, 20.0, (640,512))
             else:
-                out = cv2.VideoWriter('NormVid.mp4', fourcc, 20.0, (640,512))
+                out = cv2.VideoWriter('NormVid.avi', fourcc, 20.0, (640,512))
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -58,7 +59,9 @@ def main():
             if cv2.waitKey(10) & 0xFF == ord('s'):
                 raw = not raw
                 break
+            
         # Release the video file, and close the GUI.
+        print(x)
         cap.release()
         out.release()
 

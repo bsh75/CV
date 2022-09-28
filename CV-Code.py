@@ -5,21 +5,14 @@ import cv2
 import numpy as np
 import time
 
-def init_file_raw():
-    """Load the video file"""
-    device_index = 1 # for Boson in USB port
-    cap = cv2.VideoCapture(device_index, cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
+def init_file():
+    """Load the video file depending on what mode is required"""
+    device_index = './Data/Snip.avi' #'RawVid.avi' #./Data/Snip.avi' # for Boson in USB port
+    cap = cv2.VideoCapture(device_index)
+    #cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
-    cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)  
-    return cap
-
-def init_file():
-    """Load the video file"""
-    cap = cv2.VideoCapture(1)  # Chnge to 0 instead of filename to get from camera
-    # get the frame width and height
-    
+    #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
     return cap
 
 def contourN(frame, minA, N):
@@ -177,7 +170,7 @@ def drawMaxMin(frame):
 
 def main():
     # Open file and get width and height of frame
-    cap = init_file_raw()
+    cap = init_file()
     #cap = init_file()
 
     width = int(cap.get(3))
@@ -222,7 +215,7 @@ def main():
         dGuess, theta = geolocate(targetLoc, centerLoc, camAngleX, camAngleY, width, height)
 
         # Draw information on the frame
-        #draw(frameOut, targetLoc, dGuess, theta, T, centerLoc, width, height)
+        draw(frameOut, targetLoc, dGuess, theta, T, centerLoc, width, height)
 
         # Show the frame in the window with threshold trackbars
         cv2.imshow('Y16', frameOut) 
