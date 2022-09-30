@@ -158,7 +158,7 @@ def draw(frameOut, targetLoc, dGuess, theta, weighting, width, height, Litres):
 def drawScatteredWeights(frameValues, frameDraw, width, height,  i):
     """Display the weightings from a distribution of points in the frame"""
     start = 10
-    N = 20
+    N = 10
     Y = np.linspace(0, width, N, dtype=int)
     X = np.linspace(0, height, N, dtype=int)
     points = []
@@ -170,7 +170,7 @@ def drawScatteredWeights(frameValues, frameDraw, width, height,  i):
         row = []
         for y in Y[1:-1]:
             newPoint = (y, x)
-            newWeight = frameValues[x][y]
+            newWeight = getLitres(frameValues[x][y])
             # if not i:
             #     point = newPoint
             #     weight = newWeight
@@ -234,7 +234,7 @@ def getLitres(targetVal):
 def main():
     """Main function which switches between raw and normal feeds"""
     # Flags
-    save = True
+    save = False
     targetAquired = False
     first = True
 
@@ -334,12 +334,12 @@ def main():
                     # targetLoc = medianFilter(targetLocList)
                     litres = getLitres(targetVal)
                 # print(frame)
-                frameOut = frame
+                frameOut = frameG
 
-                # frameOut = drawScatteredWeights(frameOut, frame, width, height, i)
-                # i += 1
-                # if i == 10:
-                #     i = 0
+                frameOut = drawScatteredWeights(frameOut, frame, width, height, i)
+                i += 1
+                if i == 10:
+                    i = 0
                 
                 # Find and Draw on Contours ############################### Incorporate into target aquisition
                 minArea = 0
