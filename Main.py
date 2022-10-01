@@ -4,7 +4,8 @@ found start communicating its location to the autopilot to guide to hover
 above. It must also characterise the hotspot to determine how much water 
 will be dropped.
 Written by Brett Hockey"""
-import cv2
+from matplotlib.hatch import SmallFilledCircles
+from opencv import cv2
 import numpy as np
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
@@ -20,7 +21,7 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 ['./Log1/RawVid.mp4', './Log1/RawVidAfter.mp4'],
                 ['./Log2/RawVid.mp4', './Log2/RawVidAfter.mp4'],
                 ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter', './Main/RawVidnHandeldBefore']]
-                
+
 
 def init_file():
     """Load the video file depending on which mode is required"""
