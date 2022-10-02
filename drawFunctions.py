@@ -40,7 +40,7 @@ def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height,
     # frameOut = drawRefFrame(frameOut, width, height)
     return frameOut
 
-def drawScatteredWeights(frameValues, frameDraw, width, height, scattL, i):
+def drawScatteredWeights(frameValues, frameDraw, width, height, litres, i):
     """Display the weightings from a distribution of points in the frame"""
     thickness = 1
     colour = (0, 140, 255)
@@ -54,7 +54,7 @@ def drawScatteredWeights(frameValues, frameDraw, width, height, scattL, i):
         row = []
         for y in Y[1:-1]:
             newPoint = (y, x)
-            if scattL:
+            if litres:
                 newWeight = getLitres(frameValues[x][y])
             else:
                 newWeight = frameValues[x][y]

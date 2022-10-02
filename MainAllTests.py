@@ -28,9 +28,9 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
 def main():
     """Main function which switches between raw and normal feeds"""
     # Flags
-    save = False
-    scattL = False
-    litres = False # Set to true to display information in terms of drop quantities
+    save = True
+    scatt = True # Set to True to display a grid of values over the frame
+    litresDisplay = False # Set to True to display information in terms of drop quantities
 
     # Thresholds
     mildThresh = 100 # Warm Earth
@@ -40,9 +40,16 @@ def main():
     distThresh = 0.5 # Distance threshold for target drop trigger
 
     # Read the raw Y16 data from the camera
-    for files in Y16TestData:
-        for file in files:
+    ALL = False # Set to True to run through all videos consecutively
+    if ALL:
+        for files in Y16TestData:
+            for file in files:
 
-            singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
-    
+                singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
+    else:
+        file = Y16TestData[4][1]
+        singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
+
 main()
+
+"""Make a global CLASS for the camera from which to input all its characteristics"""

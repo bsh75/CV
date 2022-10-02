@@ -83,6 +83,7 @@ def contourN(frame, minA, N):
 
 def getLitres(targetVal):
     """Relationship between pixel value and drop quantity"""
+    print(targetVal)
     L = int(1.2 * targetVal - 100)
     if L < 20:
         L = 20

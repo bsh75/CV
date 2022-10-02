@@ -26,7 +26,7 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidHandheldBefore.mp4']]
                 
 
-def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh):
+def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh):
     """Function processes a single video file: 'file' to display and save depending on
     'save', 'scattL', and 'litres'. The chosen thresholds are also applied"""
     cap, device = init_file(file)
@@ -111,12 +111,12 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
 
         # litres = getLitres(targetVal)
         # print(frame)
-        frameOut = frame
-
-        # frameOut = drawScatteredWeights(frameOut, frame, width, height, scattL, i)
-        # i += 1
-        # if i == 10:
-        #     i = 0
+        frameOut = frameG
+        if scatt:
+            frameOut = drawScatteredWeights(frameOut, frame, width, height, litresDisplay, i)
+            i += 1
+            if i == 10:
+                i = 0
         
         # Find and Draw on Contours ############################### Incorporate into target aquisition
         minArea = 0
@@ -129,7 +129,7 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
 
         if targetAquired:
             frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
-            frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres)
+            frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litresDisplay)
 
         ## Start geolocation and sending data to autopilot
         ## Also start classifying the hotspots for drop estimation
