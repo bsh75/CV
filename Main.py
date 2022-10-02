@@ -6,7 +6,10 @@ will be dropped.
 Written by Brett Hockey"""
 import cv2
 import numpy as np
-from allFunctions import *
+from CVfunctions import *
+from drawFunctions import *
+from integrationFunctions import *
+from geoLocationFunctions import *
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
             ['./Medium/NormVid.mp4', './Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
@@ -29,10 +32,8 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
     cap, device = init_file(file)
     width = int(cap.get(3))
     height = int(cap.get(4))
-    print(width, height)
-    # width = 640
-    # height = 512
 
+    i = 0
     if save:
         filename = './drawOnCntNum/'+device.split('/')[1]+device.split('/')[2]
         out = cv2.VideoWriter(filename, -1, 20.0, (640,512))
@@ -48,7 +49,7 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
         # print('drawOnNumCnt'+device.split('/')[1]+device.split('/')[2])
         # Convert to Grayscale and get rid of unessecary information (threshold)
         frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        retval, frameT = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
+        retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
         retval, frameTmild = cv2.threshold(frameG, mildThresh, 9999, cv2.THRESH_TOZERO)
         retval, frameThot = cv2.threshold(frameG, hotThresh, 9999, cv2.THRESH_TOZERO)
         # Gett blur kernel size depending on drones heigh readings
@@ -59,7 +60,7 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
         if not targetAquired:
             print('no target')
             # Look for potential targets
-            potentialTarget, brightness, frame_CB  = targetPoint(frameT, blurKsize)
+            potentialTarget, brightness, frame_CB  = targetPoint(frameTmedium, blurKsize)
             # Check if target worth pursueing
             if brightness > rawThreshAvg:
                 targetAquired = True
@@ -74,9 +75,9 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
             targetOld = targetLoc
             
             # apply mask around old target to prioritise finding new target near it
-            mask = np.zeros_like(frameT)
+            mask = np.zeros_like(frameTmedium)
             mask = cv2.circle(mask, targetOld, maskRadius, (255,255,255), -1)
-            frameMasked = cv2.bitwise_and(frameT, mask, True)
+            frameMasked = cv2.bitwise_and(frameTmedium, mask, True)
             targetLoc, targetVal, frame_CB = targetPoint(frameMasked, blurKsize)
             print("blurred target")
             # Find the distance approximation to the target
@@ -84,7 +85,7 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
             # If the new target found within the mask is not significant enough look at rest of frame
             if targetVal < rawThreshAvg:
                 print("Reset-----------")
-                targetLoc, targetVal, frame_CB = targetPoint(frameT, blurKsize) # Find new target within unmasked frame
+                targetLoc, targetVal, frame_CB = targetPoint(frameTmedium, blurKsize) # Find new target within unmasked frame
                 # If the new target is too small then go back to searching algorithm
                 if targetVal < rawThreshAvg:
                     targetAquired = False
@@ -119,27 +120,16 @@ def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, r
         
         # Find and Draw on Contours ############################### Incorporate into target aquisition
         minArea = 0
-        howMany = 3
-        colour = (0, 140, 255)
-        areas, contours = contourN(frameT, minArea, howMany)
-        areas, contoursMild = contourN(frameTmild, minArea, howMany)
-        areas, contoursHot = contourN(frameThot, minArea, howMany)
-        for i in range(0, len(contoursMild)):
-            cv2.drawContours(frameOut, [contoursMild[i].astype(int)], 0, (0, 140, 255), 1)
-        for i in range(0, len(contours)):
-            cv2.drawContours(frameOut, [contours[i].astype(int)], 0, (0, 140, 255), 2)
-        for i in range(0, len(contoursHot)):
-            cv2.drawContours(frameOut, [contoursHot[i].astype(int)], 0, (0, 140, 255), 3)
-        
-        # break
+        maxNcontours = 3
+        areas, contoursMild = contourN(frameTmild, minArea, maxNcontours)
+        areas, contoursMedium = contourN(frameTmedium, minArea, maxNcontours)
+        areas, contoursHot = contourN(frameThot, minArea, maxNcontours)
+        contoursList = [contoursMild, contoursMedium, contoursHot]
+        frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
+
         if targetAquired:
-            thickness = 1
-            colour = (0, 0, 0)
-            # cv2.circle(frameOut, targetLoc, 3, colour, thickness)
-            cv2.circle(frameOut, targetLoc, blurKsize, colour, thickness)
-            # cv2.circle(frameOut, targetLoc, maskRadius, colour, thickness)
-            # cv2.circle(frameOut, (0, 0), 3, colour, 4)
-            frameOut = draw(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres)
+            frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
+            frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres)
 
         ## Start geolocation and sending data to autopilot
         ## Also start classifying the hotspots for drop estimation

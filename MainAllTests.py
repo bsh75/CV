@@ -6,7 +6,8 @@ will be dropped.
 Written by Brett Hockey"""
 import cv2
 import numpy as np
-from allFunctions import *
+from CVfunctions import *
+from drawFunctions import *
 from Main import singleVid
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
@@ -24,27 +25,12 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidnHandeldBefore.mp4']]
                 
 
-def init_files(file):
-    """Load the video file depending on which mode is required"""
-    deviceIndex = file
-    # deviceIndex = Y16TestData[1][0] # Device Index determines what the code is run on. 0 = Webcam. 1 = USB port on computer
-    # deviceIndex = NormalTestData[5][0] # Device Index determines what the code is run on. 0 = Webcam. 1 = USB port on computer
-    cap = cv2.VideoCapture(deviceIndex)
-    #cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
-    return cap, deviceIndex
-
-
 def main():
     """Main function which switches between raw and normal feeds"""
     # Flags
     save = False
     scattL = False
-    litres = False
-
-    i = 0
+    litres = False # Set to true to display information in terms of drop quantities
 
     # Thresholds
     mildThresh = 100 # Warm Earth
@@ -56,6 +42,7 @@ def main():
     # Read the raw Y16 data from the camera
     for files in Y16TestData:
         for file in files:
+
             singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
     
 main()
