@@ -37,10 +37,13 @@ def targetPoint(frame, blurKsize):
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frame_CB)
     return maxLoc, maxVal, frame_CB
 
-def angle(coord):
+def angleFromFront(coordOriginal, width, height):
     """Returns the angle of to the target point with 0degrees being directly infront,
-     +ve 0-180 on the right and -ve 0-180 on the left 
-     --Target must be in frame with (0, 0) in center """
+    +ve 0-180 on the right and -ve 0-180 on the left 
+    """
+    # First the coordinate must be converted to a Center Origin Frame
+    coord = convertToCentreOrigin(coordOriginal, width, height)
+    # Now find the Angle to coordinate
     if coord[1] == 0:
         if coord[0] > 0:
             angle = np.pi/2
@@ -55,7 +58,7 @@ def angle(coord):
             angle += np.pi
     return angle
 
-def distApprox(coord, width, height):
+def distApprox(pixDistance, theta, frameWidth, frameHeight):
     """Approximates the distance to the hotspots using flat ground approximation, drone height the camera specifications"""
     # Get drone height for calculations
     h = getDroneHeight()
@@ -63,22 +66,26 @@ def distApprox(coord, width, height):
     HFOV = 88.28/100*h # From data provided online
     VFOV = 77.62/100*h # From data provided online
     # Pixel ratio is the fraction of the screen that the distance takes up in x or y
-    pixRatioX = coord[0]/width
-    pixRatioY = coord[1]/height
+    pixRatioX = pixDistance*np.sin(theta)/frameWidth
+    pixRatioY = pixDistance*np.cos(theta)/frameHeight
     # spanX = 2 * h * np.tan(camAngleX) (= HFOV)
     # spanY = 2 * h * np.tan(camAngleY) (= VFOV)
     dxGuess = pixRatioX * HFOV
     dyGuess = pixRatioY * VFOV
+    dd = np.sqrt(dxGuess**2 + dyGuess**2)
+    print(theta)
+    print(np.sin(theta))
+    print(type(dd))
     dGuess = round(np.sqrt(dxGuess**2 + dyGuess**2), 1) # Estimate based on drone height
     return dGuess
 
-def getAngle(targetLoc, width, height):
+def convertToCentreOrigin(originalCoord, width, height):
+    """Converts a coordinate in Top Left Origin reference to a Centre Frame Origin referecnce"""
     centerLoc = (int(width/2), int(height/2))
-    dxP = targetLoc[0] - centerLoc[0]
-    dyP = -(targetLoc[1] - centerLoc[1])
-    coord = (dxP, dyP) # Coordinates of target point relative to centre
-    theta = angle(coord) # angle that the target point is away from right infront
-    return theta
+    dxP = originalCoord[0] - centerLoc[0]
+    dyP = -(originalCoord[1] - centerLoc[1])
+    centreCoord = (dxP, dyP) # Coordinates of target point relative to centre
+    return centreCoord
 
 def medianFilter(targetLocList):
     """Median filter on the target location list"""
@@ -89,14 +96,16 @@ def medianFilter(targetLocList):
     targetLoc = (targetLocListX[int(len(targetLocListX)/2)], targetLocListY[int(len(targetLocListY)/2)])
     return targetLoc
 
-def sendTarget(distance, angle):
-    """Send the found target to drones autopilot"""
-    successful = 0
-    return successful
+def GIMBALsendTarget(pixDistance, angle, frameWidth, frameHeight):
+    """Send the bearing and heading to GIMBAL and return an actual distance calculation"""
+    # For now just use trigonometric flat ground approximation
+    distance = distApprox(pixDistance, angle, frameWidth, frameHeight)
+    return distance
 
 def dropWater(targetVal):
     """Send the drop command to the valve to release water"""
     amountL = targetVal/100
+    print("DROPPING - DROPPING - DROPPING - DROPPING - DROPPING - DROPPING")
     return None
 
 def drawRefFrame(frame, width, height):
@@ -115,7 +124,6 @@ def drawRefFrame(frame, width, height):
     cv2.putText(frame, '+90', (rightMid[0]-50, rightMid[1]+5), cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     cv2.putText(frame, '-90', (leftMid[0], leftMid[1]+5), cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     cv2.putText(frame, '-180+', (botMid[0]-40, botMid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-
     return frame
 
 def draw(frameOut, targetLoc, dGuess, theta, weighting, width, height, Litres):

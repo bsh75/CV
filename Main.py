@@ -23,27 +23,9 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidHandheldBefore.mp4']]
                 
 
-def main():
-    """Main function which switches between raw and normal feeds"""
-    # Flags
-    save = False # Set to True to save video
-    targetAquired = False
-    first = True
-    scattL = False
-    litres = False
-
-    i = 0
-
-    # Thresholds
-    mildThresh = 100 # Warm Earth
-    mediumThresh = 120 # Dimmed Embers
-    hotThresh = 200 # Red Hot Embers and Flames
-    rawThreshAvg = 1 # For determining if the blurred area is significant enough to target
-    distThresh = 0.5 # Distance threshold for target drop trigger
-
-    # Read the raw Y16 data from the camera
-    file = Y16TestData[0][0] # Set to 0 for webcam, 1 for USB port Camera
-
+def singleVid(file, save, scattL, litres, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh):
+    """Function processes a single video file: 'file' to display and save depending on
+    'save', 'scattL', and 'litres'. The chosen thresholds are also applied"""
     cap, device = init_file(file)
     width = int(cap.get(3))
     height = int(cap.get(4))
@@ -55,6 +37,8 @@ def main():
         filename = './drawOnCntNum/'+device.split('/')[1]+device.split('/')[2]
         out = cv2.VideoWriter(filename, -1, 20.0, (640,512))
     
+    targetAquired = False
+    first = True
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -108,11 +92,11 @@ def main():
 
             # If target is still confirmed then Geolocate
             if targetAquired:
-                distance = np.sqrt(targetLoc[0]**2 + targetLoc[1]**2)# distApprox(targetLoc, width, height)  ## Just wanting pixel ratios now
-                angle = getAngle(targetLoc, width, height)
-                sendTarget(distance, angle)
+                pixDistance = np.sqrt(targetLoc[0]**2 + targetLoc[1]**2)# distApprox(targetLoc, width, height)  ## Just wanting pixel ratios now
+                angle = angleFromFront(targetLoc, width, height)
+                distance = GIMBALsendTarget(pixDistance, angle, width, height)
                 # If close enough to target then drop the water
-                if distance <= distThresh:
+                if pixDistance <= distThresh:
 
                     dropWater(targetVal)
 
@@ -155,7 +139,7 @@ def main():
             cv2.circle(frameOut, targetLoc, blurKsize, colour, thickness)
             # cv2.circle(frameOut, targetLoc, maskRadius, colour, thickness)
             # cv2.circle(frameOut, (0, 0), 3, colour, 4)
-            frameOut = draw(frameOut, targetLoc, distance, angle, targetVal, width, height, litres)
+            frameOut = draw(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres)
 
         ## Start geolocation and sending data to autopilot
         ## Also start classifying the hotspots for drop estimation
@@ -188,5 +172,3 @@ def main():
 
 
     cv2.destroyAllWindows()
-    
-main()
