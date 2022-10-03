@@ -40,6 +40,11 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
     
     targetAquired = False
     first = True
+    maskMultiplier = 4
+    N = 10
+
+    targetValList = []
+    targetLocList = []
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -54,7 +59,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         retval, frameThot = cv2.threshold(frameG, hotThresh, 9999, cv2.THRESH_TOZERO)
         # Gett blur kernel size depending on drones heigh readings
         blurKsize = getBlurSize()
-        maskRadius = blurKsize*2
+        maskRadius = blurKsize*maskMultiplier
 
         # Keep a lookout for targets that are worth dropping on
         if not targetAquired:
@@ -101,13 +106,18 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
 
                     dropWater(targetVal)
 
-            ## Median filtering
+            # Median filtering
             # Still not the greatest with large buffer sizes N (lags behind where it should be)
             # FIFO buffer with Target Locations
-            # targetLocList.append(targetLoc)
-            # if len(targetLocList) > N:
-            #     targetLocList.pop(0)
-            # targetLoc = medianFilter(targetLocList)\
+            targetLocList.append(targetLoc)
+            targetValList.append(targetVal)
+            if len(targetLocList) > N:
+                targetLocList.pop(0)
+                targetValList.pop(0)
+                targetVal = np.mean(targetValList)
+                targetLoc = np.mean(targetLocList)
+            targetLoc = medianFilterCoord(targetLocList)
+            targetVal = medianFilterVal(targetValList)
 
         # litres = getLitres(targetVal)
         # print(frame)

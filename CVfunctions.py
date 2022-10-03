@@ -32,7 +32,7 @@ def targetPoint(frame, blurKsize):
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frame_CB)
     return maxLoc, maxVal, frame_CB
 
-def medianFilter(targetLocList):
+def medianFilterCoord(targetLocList):
     """Median filter on the target location list"""
     targetLocListX = [i[0] for i in targetLocList]
     targetLocListY = [i[1] for i in targetLocList]
@@ -40,6 +40,12 @@ def medianFilter(targetLocList):
     targetLocListY.sort()
     targetLoc = (targetLocListX[int(len(targetLocListX)/2)], targetLocListY[int(len(targetLocListY)/2)])
     return targetLoc
+
+def medianFilterVal(targetValList):
+    """Median filter on list of Values"""
+    targetValList.sort()
+    targetVal = targetValList[int(len(targetValList)/2)]
+    return targetVal
 
 def contourCOM(frame, contours):
     """Finds the COM"""

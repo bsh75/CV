@@ -40,7 +40,7 @@ def main():
     distThresh = 0.5 # Distance threshold for target drop trigger
 
     # Read the raw Y16 data from the camera
-    ALL = False # Set to True to run through all videos consecutively
+    ALL = True # Set to True to run through all videos consecutively
     if ALL:
         for files in Y16TestData:
             for file in files:
