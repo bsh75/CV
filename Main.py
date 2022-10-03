@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from CVfunctions import *
 from drawFunctions import *
-from integrationFunctions import *
+from peripheralFunctions import *
 from geoLocationFunctions import *
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
@@ -28,7 +28,7 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
 
 def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh):
     """Function processes a single video file: 'file' to display and save depending on
-    'save', 'scattL', and 'litres'. The chosen thresholds are also applied"""
+    'save', 'scatt', and 'litres'. The chosen thresholds are also applied"""
     cap, device = init_file(file)
     width = int(cap.get(3))
     height = int(cap.get(4))
@@ -38,6 +38,8 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         filename = './drawOnCntNum/'+device.split('/')[1]+device.split('/')[2]
         out = cv2.VideoWriter(filename, -1, 20.0, (640,512))
     
+    masking = True
+    # Initialising flags
     targetAquired = False
     first = True
     maskMultiplier = 4
@@ -54,9 +56,10 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         # print('drawOnNumCnt'+device.split('/')[1]+device.split('/')[2])
         # Convert to Grayscale and get rid of unessecary information (threshold)
         frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
         retval, frameTmild = cv2.threshold(frameG, mildThresh, 9999, cv2.THRESH_TOZERO)
+        retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
         retval, frameThot = cv2.threshold(frameG, hotThresh, 9999, cv2.THRESH_TOZERO)
+        targetFrame = frameTmild
         # Gett blur kernel size depending on drones heigh readings
         blurKsize = getBlurSize()
         maskRadius = blurKsize*maskMultiplier
@@ -65,7 +68,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         if not targetAquired:
             print('no target')
             # Look for potential targets
-            potentialTarget, brightness, frame_CB  = targetPoint(frameTmedium, blurKsize)
+            potentialTarget, brightness, frame_CB  = targetPoint(targetFrame, blurKsize)
             # Check if target worth pursueing
             if brightness > rawThreshAvg:
                 targetAquired = True
@@ -80,17 +83,19 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
             targetOld = targetLoc
             
             # apply mask around old target to prioritise finding new target near it
-            mask = np.zeros_like(frameTmedium)
-            mask = cv2.circle(mask, targetOld, maskRadius, (255,255,255), -1)
-            frameMasked = cv2.bitwise_and(frameTmedium, mask, True)
-            targetLoc, targetVal, frame_CB = targetPoint(frameMasked, blurKsize)
+            if masking:
+                mask = np.zeros_like(targetFrame)
+                mask = cv2.circle(mask, targetOld, maskRadius, (255,255,255), -1)
+                frameMasked = cv2.bitwise_and(frameTmedium, mask, True)
+                targetFrame = frameMasked
+            targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize)
             print("blurred target")
             # Find the distance approximation to the target
             
             # If the new target found within the mask is not significant enough look at rest of frame
             if targetVal < rawThreshAvg:
                 print("Reset-----------")
-                targetLoc, targetVal, frame_CB = targetPoint(frameTmedium, blurKsize) # Find new target within unmasked frame
+                targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize) # Find new target within unmasked frame
                 # If the new target is too small then go back to searching algorithm
                 if targetVal < rawThreshAvg:
                     targetAquired = False
@@ -121,21 +126,45 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
 
         # litres = getLitres(targetVal)
         # print(frame)
-        frameOut = frameG
+        frameOut = frame
         if scatt:
-            frameOut = drawScatteredWeights(frameOut, frame, width, height, litresDisplay, i)
+            frameOut = drawScatteredWeights(frameOut, targetFrame, width, height, litresDisplay, i)
             i += 1
             if i == 10:
                 i = 0
         
         # Find and Draw on Contours ############################### Incorporate into target aquisition
         minArea = 0
-        maxNcontours = 3
-        areas, contoursMild = contourN(frameTmild, minArea, maxNcontours)
-        areas, contoursMedium = contourN(frameTmedium, minArea, maxNcontours)
-        areas, contoursHot = contourN(frameThot, minArea, maxNcontours)
+        maxNcontours = 1
+        areasMild, contoursMild = contourN(frameTmild, minArea, maxNcontours)
+        areasMedium, contoursMedium = contourN(frameTmedium, minArea, maxNcontours)
+        areasHot, contoursHot = contourN(frameThot, minArea, maxNcontours)
         contoursList = [contoursMild, contoursMedium, contoursHot]
+        areasList = [areasMild, areasMedium, areasHot]
+
         frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
+        # frameOut = drawContourAreas(frameOut, contoursHot, areasHot)
+        COMhot = None
+        COMmedium = None
+        COMmild = None
+        for cH in contoursHot:
+            COMhot = contourCOM(cH)
+        for cMe in contoursMedium:
+            COMmedium = contourCOM(cMe)
+        for cMi in contoursMedium:
+            COMmild = contourCOM(cMi)
+        
+        thickness = 3
+        colour = (0, 0, 250)  
+        size = 0.5
+        if COMhot:
+            cv2.putText(frame, '. h', COMhot, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        if COMhot:
+            cv2.putText(frame, '. me', COMmedium, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        if COMhot:
+            cv2.putText(frame, '. mi', COMmild, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        # cv2.putText(frame, 'COMmild', COMmild, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        # cv2.putText(frame, 'COMmedium', COMmedium, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
 
         if targetAquired:
             frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)

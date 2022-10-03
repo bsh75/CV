@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from integrationFunctions import getDroneHeight
+from peripheralFunctions import getDroneHeight
 
 def init_file(file):
     """Load the video file depending on which mode is required"""
@@ -22,6 +22,12 @@ def getBlurSize():
     #d = int(640*diameter/(height*np.tan(fov)))
     HFOV = 88.28/100*h # From data provided online
     d = int(512*diameter/HFOV) # Ratio equivalence
+    # print("from points ", d)
+    # angle = 50*np.pi/180
+    # HFOV = 2*np.sin(angle/2)
+    # d = int(512*diameter/HFOV) # Ratio equivalence
+    # print("from angle ", d)
+    
     return d
 
 def targetPoint(frame, blurKsize):
@@ -47,24 +53,15 @@ def medianFilterVal(targetValList):
     targetVal = targetValList[int(len(targetValList)/2)]
     return targetVal
 
-def contourCOM(frame, contours):
+def contourCOM(contour):
     """Finds the COM"""
-    # For contour find the COM and draw it along with the contour itself
-    COMs = []
-    for c in contours:
-        area = cv2.contourArea(c)
-        if area > 400:
-            frameOut = cv2.drawContours(frame, [c], -1, (255, 255, 0), 2)
-            M = cv2.moments(c)
-            if M['m00'] != 0:
-                cx = int(M['m10']/M['m00'])
-                cy = int(M['m01']/M['m00'])
-                coord = (cx, cy)
-                COMs.append(coord)
-    # Draw the COM for each contour
-    for COM in COMs:
-        cv2.circle(frameOut, COM, 5, (255, 255, 0), -1)
-    return frameOut
+    M = cv2.moments(contour)
+    COM = None
+    if M['m00'] != 0:
+        cx = int(M['m10']/M['m00'])
+        cy = int(M['m01']/M['m00'])
+        COM = (cx, cy)
+    return COM
 
 def contourN(frame, minA, N):
     """Find the N largest contours within the frame"""
@@ -85,7 +82,7 @@ def contourN(frame, minA, N):
             AC_list.remove(max1)
             C_list.append(max1[1])
             A_list.append(max1[0])
-    return A_list, contours
+    return A_list, C_list
 
 def getLitres(targetVal):
     """Relationship between pixel value and drop quantity"""

@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from CVfunctions import getLitres
+from CVfunctions import getLitres, contourCOM
 
 def drawRefFrame(frame, width, height):
     """Draws the reference frame on the frame for visual aid"""
@@ -40,15 +40,15 @@ def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height,
     # frameOut = drawRefFrame(frameOut, width, height)
     return frameOut
 
-def drawScatteredWeights(frameValues, frameDraw, width, height, litres, i):
+def drawScatteredWeights(frameDraw, frameValues, width, height, litres, i):
     """Display the weightings from a distribution of points in the frame"""
     thickness = 1
     colour = (0, 140, 255)
+    size = 0.4
     N = 20
     Y = np.linspace(0, width, N, dtype=int)
     X = np.linspace(0, height, N, dtype=int)
     points = []
-    size = 0.4
     cv2.putText(frameDraw, str(frameValues[X[-2]][Y[-2]]), (X[-1], Y[-4]), cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     for x in X[1:-1]:
         row = []
@@ -83,4 +83,14 @@ def drawContours(frame, contourList, thicknessList):
         contours = contourList[j]
         for i in range(0, len(contours)):
             cv2.drawContours(frame, [contours[i].astype(int)], 0, (0, 140, 255), thicknessList[j])
+    return frame
+
+def drawContourAreas(frame, contours, areas):
+    """Draws the areas of contours positioned at their COM"""
+    thickness = 2
+    colour = (0, 0, 0)  
+    size = 0.5
+    for i in range(0, len(contours)):
+        COM = contourCOM(contours[i])
+        cv2.putText(frame, ". Area: "+str(areas[i]), COM, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     return frame

@@ -1,5 +1,5 @@
 import numpy as np
-from integrationFunctions import getDroneHeight
+from peripheralFunctions import getDroneHeight
 
 def angleFromFront(coordOriginal, width, height):
     """Returns the angle of to the target point with 0degrees being directly infront,

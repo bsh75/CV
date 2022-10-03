@@ -22,13 +22,13 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 ['./Large/RawVid.mp4',  './Large/RawVidAfter.mp4'],
                 ['./Log1/RawVid.mp4', './Log1/RawVidAfter.mp4'],
                 ['./Log2/RawVid.mp4', './Log2/RawVidAfter.mp4'],
-                ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidnHandeldBefore.mp4']]
+                ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidHandheldBefore.mp4']]
                 
 
 def main():
     """Main function which switches between raw and normal feeds"""
     # Flags
-    save = True
+    save = False
     scatt = True # Set to True to display a grid of values over the frame
     litresDisplay = False # Set to True to display information in terms of drop quantities
 
@@ -47,7 +47,8 @@ def main():
 
                 singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
     else:
-        file = Y16TestData[4][1]
+        # Select single file to play using array indexing
+        file = Y16TestData[1][0]
         singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
 
 main()
