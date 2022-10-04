@@ -36,6 +36,7 @@ def targetPoint(frame, blurKsize):
     circ_kern = circ_kern/sum(sum(circ_kern))
     frame_CB = cv2.filter2D(frame,-1,circ_kern) # fliter using the circular kernel
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frame_CB)
+    frame_CB = cv2.circle(frame_CB, maxLoc, blurKsize, (0, 0, 0), -1)
     return maxLoc, maxVal, frame_CB
 
 def medianFilterCoord(targetLocList):

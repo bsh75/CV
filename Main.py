@@ -35,7 +35,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
 
     i = 0
     if save:
-        filename = 'LoacateNoTxtImg'+device.split('/')[1]+device.split('/')[2] #./drawOnCntNum/
+        filename = 'AllImg'+device.split('/')[1]+device.split('/')[2] #./drawOnCntNum/
         out = cv2.VideoWriter(filename, -1, 20.0, (640,512))
     
     masking = False
@@ -89,6 +89,8 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
                 frameMasked = cv2.bitwise_and(frameTmedium, mask, True)
                 targetFrame = frameMasked
             targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize)
+            targetLoc2, targetVal, frame_CB = targetPoint(frame_CB, blurKsize)
+            targetLoc3, targetVal, frame_CB = targetPoint(frame_CB, blurKsize)
             print("blurred target")
             # Find the distance approximation to the target
             
@@ -107,8 +109,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
                 angle = angleFromFront(targetLoc, width, height)
                 distance = GIMBALsendTarget(pixDistance, angle, width, height)
                 # If close enough to target then drop the water
-                if pixDistance <= distThresh:
-
+                if distance <= distThresh:
                     dropWater(targetVal)
 
             # Median filtering
@@ -127,15 +128,17 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         # litres = getLitres(targetVal)
         # print(frame)
         frameOut = frame
+        
+
         if scatt:
-            # frameOut = drawScatteredWeights(frameOut, targetFrame, width, height, litresDisplay, i)
+            frameOut = drawScatteredWeights(frameOut, targetFrame, width, height, litresDisplay, i)
             i += 1
             if i == 10:
                 i = 0
         
         # Find and Draw on Contours ############################### Incorporate into target aquisition
         minArea = 0
-        maxNcontours = 1
+        maxNcontours = 3
         areasMild, contoursMild = contourN(frameTmild, minArea, maxNcontours)
         areasMedium, contoursMedium = contourN(frameTmedium, minArea, maxNcontours)
         areasHot, contoursHot = contourN(frameThot, minArea, maxNcontours)
@@ -143,7 +146,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         areasList = [areasMild, areasMedium, areasHot]
 
         frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
-        # frameOut = drawContourAreas(frameOut, contoursHot, areasHot)
+        frameOut = drawContourAreas(frameOut, contoursHot, areasHot)
         COMhot = None
         COMmedium = None
         COMmild = None
@@ -154,6 +157,17 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         for cMi in contoursMedium:
             COMmild = contourCOM(cMi)
         
+        # Drop Sequencing
+        frameOut = cv2.line(frameOut, targetLoc, targetLoc2, (0, 0, 0), 2)
+        frameOut = cv2.line(frameOut, targetLoc2, targetLoc3, (0, 0, 0), 2)
+        frameOut = cv2.circle(frameOut, targetLoc, 5, (0, 0, 0), -1)
+        frameOut = cv2.circle(frameOut, targetLoc2, 5, (0, 0, 0), -1)
+        frameOut = cv2.circle(frameOut, targetLoc3, 5, (0, 0, 0), -1)
+        cv2.putText(frameOut, '1', (targetLoc[0]+10, targetLoc[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        cv2.putText(frameOut, '2', (targetLoc2[0]+10, targetLoc2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        cv2.putText(frameOut, '3', (targetLoc3[0]+10, targetLoc3[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
+
         thickness = 4
         colour = (0, 0, 250)  
         size = 0.5
