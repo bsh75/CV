@@ -35,10 +35,10 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
 
     i = 0
     if save:
-        filename = './drawOnCntNum/'+device.split('/')[1]+device.split('/')[2]
+        filename = 'LoacateNoTxtImg'+device.split('/')[1]+device.split('/')[2] #./drawOnCntNum/
         out = cv2.VideoWriter(filename, -1, 20.0, (640,512))
     
-    masking = True
+    masking = False
     # Initialising flags
     targetAquired = False
     first = True
@@ -128,7 +128,7 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         # print(frame)
         frameOut = frame
         if scatt:
-            frameOut = drawScatteredWeights(frameOut, targetFrame, width, height, litresDisplay, i)
+            # frameOut = drawScatteredWeights(frameOut, targetFrame, width, height, litresDisplay, i)
             i += 1
             if i == 10:
                 i = 0
@@ -154,21 +154,25 @@ def singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThr
         for cMi in contoursMedium:
             COMmild = contourCOM(cMi)
         
-        thickness = 3
+        thickness = 4
         colour = (0, 0, 250)  
         size = 0.5
-        if COMhot:
-            cv2.putText(frame, '. h', COMhot, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-        if COMhot:
-            cv2.putText(frame, '. me', COMmedium, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-        if COMhot:
-            cv2.putText(frame, '. mi', COMmild, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        # if COMhot:
+        #     # cv2.putText(frame, '.', COMhot, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        #     frameOut = cv2.circle(frameOut, COMhot, 3, colour, thickness)
+
+        # if COMmedium:
+        #     cv2.putText(frame, '.', COMmedium, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+        # if COMmild:
+        #     cv2.putText(frame, '.', COMmild, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
         # cv2.putText(frame, 'COMmild', COMmild, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
         # cv2.putText(frame, 'COMmedium', COMmedium, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
 
         if targetAquired:
             frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
             frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litresDisplay)
+        
+        frameOut = drawRefFrame(frameOut, width, height)
 
         ## Start geolocation and sending data to autopilot
         ## Also start classifying the hotspots for drop estimation
