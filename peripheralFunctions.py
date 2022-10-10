@@ -5,7 +5,7 @@ import numpy as np
 def getDroneHeight():
     """Returns the height of the drone above point in center of frame in practice 
     this will be the function that recieves height from drone onboard computer"""
-    height = 3.4 #m
+    height = 2.4 #m
     return height
 
 def GIMBALsendTarget(pixDistance, angle, frameWidth, frameHeight):
@@ -14,8 +14,11 @@ def GIMBALsendTarget(pixDistance, angle, frameWidth, frameHeight):
     distance = 5# distApprox(pixDistance, angle, frameWidth, frameHeight)
     return distance
 
-def dropWater(targetVal):
+def dropWater(amountL):
     """Send the drop command to the valve to release water"""
-    amountL = targetVal/100
     print("DROPPING - DROPPING - DROPPING - DROPPING - DROPPING - DROPPING")
+    return None
+
+def sendInfoToSA200(distance, angle):
+    """Function which sends the bearing and heading information to SA200"""
     return None

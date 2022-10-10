@@ -26,30 +26,30 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 
 
 def main():
-    """Main function which switches between raw and normal feeds"""
+    """Main function which sets all the flags which determine the behaviour of the algorithm.
+            -save: If the output of the video is to be saved
+            -scatt: If the grid of pixel intensities is to be overlayed
+            -litresDisplay: To display the information in terms of litres
+    """
     # Flags
-    save = True
+    save = False
     scatt = True # Set to True to display a grid of values over the frame
-    litresDisplay = False # Set to True to display information in terms of drop quantities
-
-    # Thresholds
-    mildThresh = 100 # Warm Earth
-    mediumThresh = 120 # Dimmed Embers
-    hotThresh = 230 # Red Hot Embers and Flames
-    rawThreshAvg = 1 # For determining if the blurred area is significant enough to target
-    distThresh = 0.5 # Distance threshold for target drop trigger
-
+    litresDisplay = True # Set to True to display information in terms of drop quantities
+    masking = True # Set to True to use masking when finding the 
+    contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
+    targetInfo = True
     # Read the raw Y16 data from the camera
-    ALL = False # Set to True to run through all videos consecutively
+    ALL = True # Set to True to run through all videos consecutively
+    DRAW = True
     if ALL:
         for files in Y16TestData:
             for file in files:
 
-                singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
+                singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
     else:
         # Select single file to play using array indexing
         file = Y16TestData[4][0]
-        singleVid(file, save, scatt, litresDisplay, mediumThresh, mildThresh, hotThresh, rawThreshAvg, distThresh)
+        singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
 
 main()
 

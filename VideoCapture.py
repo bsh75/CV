@@ -4,21 +4,11 @@ Written by Brett Hockey"""
 
 import cv2
 import numpy as np
-
-def init_file(raw):
-    """Load the video file depending on what mode is required"""
-    device_index = 1 # for Boson in USB port
-    cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    if raw:
-        # Load data as Y16 raw
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
-        
-    return cap
+from CVfunctions import init_fileCapture
 
 def main():
-    """Main function which switches between raw and normal feeds"""
+    """Main function which switches between raw and normal feeds
+        Is used to save videos to the computer for post-processing"""
     run = True
     raw = True
     save = True
@@ -26,7 +16,7 @@ def main():
 
     while run:
         # Read the raw Y16 data from the camera
-        cap = init_file(raw)
+        cap = init_fileCapture(raw)
         if save:
             fourcc = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X') # Unsure what this does atm but may be needed for Rasberry Pi
             if raw:
@@ -39,11 +29,6 @@ def main():
             if not ret:
                 break
 
-            ######## ADD CV CODE BELOW ########
-            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
-            # frame = drawMaxMin(frame)
-
-            ###################################
             if save:
                 out.write(frame)
             # Show the frame in the window

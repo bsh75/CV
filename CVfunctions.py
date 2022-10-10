@@ -6,38 +6,54 @@ def init_file(file):
     """Load the video file depending on which mode is required"""
     # deviceIndex = file
     deviceIndex = file # Device Index determines what the code is run on. 0 = Webcam. 1 = USB port on computer
-    # deviceIndex = NormalTestData[5][0] # Device Index determines what the code is run on. 0 = Webcam. 1 = USB port on computer
     cap = cv2.VideoCapture(deviceIndex)
-    #cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # Chnge to 0 instead of filename to get from camera'./Snip.avi'   './Data/MovHotspot.mp4'
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    #cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' '))
-    return cap, deviceIndex
+    return cap
 
-def getBlurSize():
-    """Function will later be developed to use the drone height to specifiy kernel size"""
-    #fov = 50*np.pi/180 #rad
-    diameter = 0.5 #m
+def init_fileCapture(raw, windows):
+    """Load the video file depending on what mode is required, used for saving videos or  live
+        NOTE: cv2.CAP_DSHOW is only neccessary for windows OS"""
+    device_index = 1 # for Boson in USB port
+    if windows:
+        cap = cv2.VideoCapture(device_index+cv2.CAP_DSHOW) # REMOVE '+cv2.CAP_DSHOW' for on Rasberry Pi (Linux system)
+    else:
+        cap = cv2.VideoCapture(device_index) # REMOVE '+cv2.CAP_DSHOW' for on Rasberry Pi (Linux system)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    if raw:
+        # Load data as Y16 raw
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' ')) 
+    return cap
+
+def getBlurSize(width, height):
+    """Function uses the drone height and camera specs to specifiy kernel size
+        NOTE: Either Vertical or Horizontal could be used.
+        NOTE: Calibration of DIAMETER is required so it matches area of effect of water,
+        this could also be done dynamically depeneding on the amount of estimated water 
+        to drop in previous frame"""
+    # One method from online data
+    DIAMETER = 0.5 #m estimated diameter of the drop radius
     h = getDroneHeight() #m
-    #d = int(640*diameter/(height*np.tan(fov)))
-    HFOV = 88.28/100*h # From data provided online
-    d = int(512*diameter/HFOV) # Ratio equivalence
-    # print("from points ", d)
-    # angle = 50*np.pi/180
-    # HFOV = 2*np.sin(angle/2)
-    # d = int(512*diameter/HFOV) # Ratio equivalence
-    # print("from angle ", d)
-    
-    return d
+    # Horizontal
+    HFOV = 50 *np.pi/180 # convert 50 deg to radians
+    NH = np.tan(HFOV/2)*h*2
+    dH = int(width*DIAMETER/NH)
+    # Vertical
+    VFOV = HFOV/5*4 # Ratio of pixel width to height
+    NV = np.tan(VFOV/2)*h*2
+    dV = int(height*DIAMETER/NV)
+    return dH
+
 
 def targetPoint(frame, blurKsize):
     """Finds the brightest point in the frame averaged by the a circular kernal with size of spread of water"""
     circ_kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(blurKsize,blurKsize))
     circ_kern = circ_kern/sum(sum(circ_kern))
-    frame_CB = cv2.filter2D(frame,-1,circ_kern) # fliter using the circular kernel
-    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frame_CB)
-    frame_CB = cv2.circle(frame_CB, maxLoc, blurKsize, (0, 0, 0), -1)
-    return maxLoc, maxVal, frame_CB
+    frameCB = cv2.filter2D(frame,-1,circ_kern) # fliter using the circular kernel
+    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frameCB)
+    frameCBblanked = cv2.circle(frame, maxLoc, blurKsize, (0, 0, 0), -1)
+    return maxLoc, maxVal, frameCB, frameCBblanked
 
 def medianFilterCoord(targetLocList):
     """Median filter on the target location list"""
@@ -66,29 +82,104 @@ def contourCOM(contour):
 
 def contourN(frame, minA, N):
     """Find the N largest contours within the frame"""
-    C_list = []
-    A_list = []
-    AC_list = []
+    CList = []
+    AList = []
+    ACList = []
     contours = cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2]
     for c in contours:
         area = cv2.contourArea(c)
         if area > minA:
-            AC_list.append((area, c))
+            ACList.append((area, c))
+    if N == 'all':
+        N = len(ACList)
     for i in range(0, N):
-        if N <= len(AC_list):
+        if N <= len(ACList):
             max1 = (0, 0)
-            for j in range(len(AC_list)):
-                if AC_list[j][0] > max1[0]:
-                    max1 = AC_list[j]
-            AC_list.remove(max1)
-            C_list.append(max1[1])
-            A_list.append(max1[0])
-    return A_list, C_list
+            for j in range(len(ACList)):
+                if ACList[j][0] > max1[0]:
+                    max1 = ACList[j]
+            ACList.remove(max1)
+            CList.append(max1[1])
+            AList.append(max1[0])
+    return AList, CList
 
 def getLitres(targetVal):
     """Relationship between pixel value and drop quantity"""
     print(targetVal)
-    L = int(1.2 * targetVal - 100)
-    if L < 20:
-        L = 20
+    L = int(0.3 * targetVal + 2)
+    if L < 0:
+        L = 0
     return L
+
+
+def multiTarget(targetFrame, blurKsize):
+    """Find N targets in the frame"""
+    N = 3
+    i = 0
+    targetLoc, targetVal, frame_CB, frameCBblanked = targetPoint(targetFrame, blurKsize)
+    targetList = []
+    targetValList = []
+    targetList.append(targetLoc)
+    targetValList.append(targetVal)
+    while  i < N-1:
+        targetLoc, targetVal, frame_CB, frameCBblanked = targetPoint(frameCBblanked, blurKsize)
+        targetList.append(targetLoc)
+        targetValList.append(targetVal)
+        i += 1
+    return targetList, targetValList
+
+def contourTargetID(frameMild, frameMedium, frameHot, frameCB):
+    """Finds a target and target value using weighted sum of the diffent COMs of
+    the largest area contours at each threshold"""
+    minArea = 0
+    maxNcontours = 3 # set to 'all' to find all contours
+    # For each of thresholds, find the top maxNcontours contours
+    areasMild, contoursMild = contourN(frameMild, minArea, maxNcontours)
+    areasMedium, contoursMedium = contourN(frameMedium, minArea, maxNcontours)
+    areasHot, contoursHot = contourN(frameHot, minArea, maxNcontours)
+    if len(areasMild) > 0:
+        areasMildMaxIndex = areasMild.index(max(areasMild))
+        COMmildMax = contourCOM(contoursMild[areasMildMaxIndex])
+        mildWeight = 1
+    else:
+        COMmildMax = (0, 0)
+        mildWeight = 0
+
+    if len(areasMedium) > 0:
+        areasMediumMaxIndex = areasMedium.index(max(areasMedium))
+        COMmediumMax = contourCOM(contoursMedium[areasMediumMaxIndex])
+        mediumWeight = 5
+    else:
+        mediumWeight = 0
+        COMmediumMax = (0, 0)
+
+    if len(areasHot) > 0:
+        areasHotMaxIndex = areasHot.index(max(areasHot))
+        COMhotMax = contourCOM(contoursHot[areasHotMaxIndex])
+        hotWeight = 20
+    else:
+        COMhotMax = (0, 0)
+        hotWeight = 0
+    
+    if (mildWeight == 0) and (mediumWeight == 0) and (hotWeight == 0):
+        weightedCOMavg = None
+        weightedCOMValue = None
+    else:
+        weightedCOMaverageX = int((mildWeight*COMmildMax[0] + mediumWeight*COMmediumMax[0] + hotWeight*COMhotMax[0])/(mildWeight + mediumWeight + hotWeight))
+        weightedCOMaverageY = int((mildWeight*COMmildMax[1] + mediumWeight*COMmediumMax[1] + hotWeight*COMhotMax[1])/(mildWeight + mediumWeight + hotWeight))
+        weightedCOMavg = (weightedCOMaverageX, weightedCOMaverageY)
+        weightedCOMValue = frameCB[weightedCOMaverageY, weightedCOMaverageX]
+    
+    COMsHot = []
+    COMsMedium = []
+    COMsMild = []
+    for cH in contoursHot:
+        COMsHot.append(contourCOM(cH))
+    for cMe in contoursMedium:
+        COMsMedium.append(contourCOM(cMe))
+    for cMi in contoursMild:
+        COMsMild.append(contourCOM(cMi))
+        
+    contoursList = [contoursMild, contoursMedium, contoursHot]
+
+    return weightedCOMavg, weightedCOMValue, contoursList

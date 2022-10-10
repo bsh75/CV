@@ -28,19 +28,19 @@ def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height,
     centerLoc = (int(width/2), int(height/2))
     weighting = int(weighting)
     cv2.circle(frameOut, targetLoc, 5, colour, thickness) 
-    # cv2.putText(frameOut, str(int(dGuess))+'pix '+str(round(theta*180/np.pi, 1))+'deg', (targetLoc[0]+Xadj, targetLoc[1]+0), 
-    #                                             cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-    # if Litres:
-    #     cv2.putText(frameOut, 'Drop: '+str(Litres) + 'L', (targetLoc[0]+Xadj, targetLoc[1]+25),
-    #                                             cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-    # else:
-    #     cv2.putText(frameOut, 'Weight: '+str(weighting), (targetLoc[0]+Xadj, targetLoc[1]+25),
-    #                                             cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+    cv2.putText(frameOut, str(int(dGuess))+'pix '+str(round(theta*180/np.pi, 1))+'deg', (targetLoc[0]+Xadj, targetLoc[1]+0), 
+                                                cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+    if Litres:
+        cv2.putText(frameOut, 'Drop: '+str(Litres) + 'L', (targetLoc[0]+Xadj, targetLoc[1]+25),
+                                                cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
+    else:
+        cv2.putText(frameOut, 'Weight: '+str(weighting), (targetLoc[0]+Xadj, targetLoc[1]+25),
+                                                cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     cv2.line(frameOut, centerLoc, targetLoc, colour, thickness)
     return frameOut
 
-def drawScatteredWeights(frameDraw, frameValues, width, height, litres, i):
-    """Display the weightings from a distribution of points in the frame"""
+def drawScatteredWeights(frameDraw, frameValues, width, height, litresDisplay):
+    """Display the Weighting or Litres from a distribution of points in the frame"""
     thickness = 1
     colour = (0, 140, 255)
     size = 0.4
@@ -53,13 +53,10 @@ def drawScatteredWeights(frameDraw, frameValues, width, height, litres, i):
         row = []
         for y in Y[1:-1]:
             newPoint = (y, x)
-            if litres:
+            if litresDisplay:
                 newWeight = getLitres(frameValues[x][y])
             else:
                 newWeight = frameValues[x][y]
-            # if not i:
-            #     point = newPoint
-            #     weight = newWeight
             row.append(newPoint)
             cv2.putText(frameDraw, str(newWeight), newPoint, cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
         points.append(row)   
