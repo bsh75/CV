@@ -34,12 +34,12 @@ def main():
     # Flags
     save = False
     scatt = True # Set to True to display a grid of values over the frame
-    litresDisplay = True # Set to True to display information in terms of drop quantities
-    masking = True # Set to True to use masking when finding the 
+    litresDisplay = False # Set to True to display information in terms of drop quantities
+    masking = False # Set to True to use masking when finding the 
     contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
     targetInfo = True
     # Read the raw Y16 data from the camera
-    ALL = True # Set to True to run through all videos consecutively
+    ALL = False # Set to True to run through all videos consecutively
     DRAW = True
     if ALL:
         for files in Y16TestData:
@@ -48,7 +48,7 @@ def main():
                 singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
     else:
         # Select single file to play using array indexing
-        file = Y16TestData[4][0]
+        file = Y16TestData[5][1]
         singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
 
 main()

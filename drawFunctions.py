@@ -20,7 +20,7 @@ def drawRefFrame(frame, width, height):
     cv2.putText(frame, '-180+', (botMid[0]-40, botMid[1]-10), cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     return frame
 
-def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height, Litres):
+def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height, Litres, litresDisplay):
     size = 0.5
     thickness = 2
     colour = (0, 0, 0)
@@ -30,7 +30,7 @@ def drawTargetInfo(frameOut, targetLoc, dGuess, theta, weighting, width, height,
     cv2.circle(frameOut, targetLoc, 5, colour, thickness) 
     cv2.putText(frameOut, str(int(dGuess))+'pix '+str(round(theta*180/np.pi, 1))+'deg', (targetLoc[0]+Xadj, targetLoc[1]+0), 
                                                 cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
-    if Litres:
+    if litresDisplay:
         cv2.putText(frameOut, 'Drop: '+str(Litres) + 'L', (targetLoc[0]+Xadj, targetLoc[1]+25),
                                                 cv2.FONT_HERSHEY_SIMPLEX, size, colour, thickness)
     else:

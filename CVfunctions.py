@@ -52,8 +52,8 @@ def targetPoint(frame, blurKsize):
     circ_kern = circ_kern/sum(sum(circ_kern))
     frameCB = cv2.filter2D(frame,-1,circ_kern) # fliter using the circular kernel
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(frameCB)
-    frameCBblanked = cv2.circle(frame, maxLoc, blurKsize, (0, 0, 0), -1)
-    return maxLoc, maxVal, frameCB, frameCBblanked
+    # frameBlanked = None # cv2.circle(frame, maxLoc, blurKsize, (0, 0, 0), -1)
+    return maxLoc, maxVal, frameCB
 
 def medianFilterCoord(targetLocList):
     """Median filter on the target location list"""
@@ -105,8 +105,7 @@ def contourN(frame, minA, N):
 
 def getLitres(targetVal):
     """Relationship between pixel value and drop quantity"""
-    print(targetVal)
-    L = int(0.3 * targetVal + 2)
+    L = int(0.1 * targetVal)
     if L < 0:
         L = 0
     return L
@@ -116,13 +115,14 @@ def multiTarget(targetFrame, blurKsize):
     """Find N targets in the frame"""
     N = 3
     i = 0
-    targetLoc, targetVal, frame_CB, frameCBblanked = targetPoint(targetFrame, blurKsize)
+    targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize)
+    frameBlanked = cv2.circle(targetFrame, targetLoc, blurKsize, (0, 0, 0), -1)
     targetList = []
     targetValList = []
     targetList.append(targetLoc)
     targetValList.append(targetVal)
     while  i < N-1:
-        targetLoc, targetVal, frame_CB, frameCBblanked = targetPoint(frameCBblanked, blurKsize)
+        targetLoc, targetVal, frame_CB = targetPoint(frameBlanked, blurKsize)
         targetList.append(targetLoc)
         targetValList.append(targetVal)
         i += 1

@@ -34,7 +34,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
     mildThresh = 100 # Warm Earth
     mediumThresh = 120 # Dimmed Embers
     hotThresh = 230 # Red Hot Embers and Flames
-    minDropSize = 10 #L For determining if the blurred area is significant enough to target
+    minDropSize = 5 #L For determining if the blurred area is significant enough to target
     distThresh = 0.5 # Distance threshold for target drop trigger
 
     maskMultiplier = 4 # Size of mask radius = maskMultiplier*blurKsize
@@ -45,15 +45,15 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
 
     # Initialising flags
     targetAquired = False
-    weightedCOMavg = False # Not a flag just needs a default of None
+    weightedCOMavg = False # Not a flag just needs a default of False
 
     # Median filter
-    N = 10 # Length of median filter buffer
+    N = 5 # Length of median filter buffer
     targetValList = []
     targetLocList = []
 
     # Initialise the file
-    cap = init_file(file) # for live operation or video capture use init_fileCapture(raw, windows)
+    cap = init_file(file) # for live operation or video capture: use init_fileCapture(raw, windows)
     width = int(cap.get(3))
     height = int(cap.get(4))
 
@@ -71,6 +71,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
         # Convert to Grayscale and apply the thresholds
         frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         retval, frameTmild = cv2.threshold(frameG, mildThresh, 9999, cv2.THRESH_TOZERO)
+        frameTMild = frameTmild
         if contours:
             retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
             retval, frameThot = cv2.threshold(frameG, hotThresh, 9999, cv2.THRESH_TOZERO)
@@ -88,7 +89,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
         if not targetAquired:
             print('no target')
             # Look for potential targets
-            potentialTarget, brightness, frame_CB, frameCBblanked  = targetPoint(targetFrame, blurKsize)
+            potentialTarget, brightness, frame_CB  = targetPoint(targetFrame, blurKsize)
             # Check if target worth pursueing and adjust flags
             if getLitres(brightness) > minDropSize:
                 targetAquired = True
@@ -106,7 +107,8 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                 frameMasked = cv2.bitwise_and(targetFrame, mask, True)
                 targetFrame = frameMasked
 
-            targetLoc, targetVal, frame_CB, frameCBblanked = targetPoint(targetFrame, blurKsize)    
+            # Find new target
+            targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize)    
             print("blurred target")
             targetBlurLoc = targetLoc
             targetBlurVal = targetVal
@@ -116,27 +118,26 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                 blurWeight = 20
                 COMWeight = 1
                 weightedCOMavg, weightedCOMValue, contoursList = contourTargetID(frameTmild, frameTmedium, frameThot, frame_CB)
-                print("loc: ", weightedCOMavg, targetBlurLoc)
-                print("val: ", weightedCOMValue, targetBlurVal)
+                # print("loc: ", weightedCOMavg, targetBlurLoc)
+                # print("val: ", weightedCOMValue, targetBlurVal)
                 if weightedCOMavg:
                     targetLocX = int((blurWeight*targetBlurLoc[0] + COMWeight*weightedCOMavg[0])/(blurWeight + COMWeight))
                     targetLocY = int((blurWeight*targetBlurLoc[1] + COMWeight*weightedCOMavg[1])/(blurWeight + COMWeight))
                     targetLoc = (targetLocX, targetLocY)
                     targetVal = frame_CB[targetLocY, targetLocX]
-                    print("NEW VAL = ", targetVal)
+                    # print("NEW VAL = ", targetVal)
                 
 
             # Median filtering for outlier rejection
             # Still not the greatest with large buffer sizes N (lags behind where it should be)
             # FIFO buffer with Target Locations and Values
-            targetLocList.append(targetLoc)
-            targetValList.append(targetVal)
+            targetLocList.insert(0, targetLoc)
+            targetValList.insert(0, targetVal)
             if len(targetLocList) > N:
-                targetLocList.pop(0)
-                targetValList.pop(0)
+                targetLocList.pop(-1)
+                targetValList.pop(-1)
                 targetLoc = medianFilterCoord(targetLocList)
                 targetVal = medianFilterVal(targetValList)
-            
             # If the new target found within the mask is not significant enough go back to searching
             if getLitres(targetVal) < minDropSize:
                 targetAquired = False
@@ -155,9 +156,8 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                 if distance <= distThresh:
                     dropWater(litres)
 
-
         # Displays
-        frameOut = frameTmild #use the unadultered frame to draw on (allows for colour)
+        frameOut = frame #use the unadultered frame: 'frame' to draw on (allows for colour)
         if DRAW:
             if contours:
                 if weightedCOMavg:
@@ -171,7 +171,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
             if targetAquired:
                 frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
                 if targetInfo:
-                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres)
+                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres, litresDisplay)
                 if contours:
                     frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
             
