@@ -42,24 +42,26 @@ def main():
     targetInfo = True
     ALL = False # Set to True to run through all videos consecutively
     DRAW = True
+    windows = True
+    raw = True
 
     # If just wanting to capture and record video for later analysis
     videoCaptureF = False
     if videoCaptureF:
-        vidCapture()
+        vidCapture(save, windows)
     else:
         if ALL:
             for files in Y16TestData:
                 for file in files:
 
-                    singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
+                    singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
         else:
             if live:
                 file = 'Camera'
             else:
                 # Select single file to play using array indexing
                 file = Y16TestData[5][1]
-            singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
+            singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
 
 main()
 

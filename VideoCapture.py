@@ -6,14 +6,10 @@ import cv2
 import numpy as np
 from CVfunctions import init_Camera
 
-def vidCapture():
+def vidCapture(save, windows, raw):
     """Main function which switches between raw and normal feeds
         Is used to save videos to the computer for post-processing"""
     run = True
-    raw = True
-    save = True
-    rawThresh = 110
-    windows = False
 
     while run:
         # Read the raw Y16 data from the camera

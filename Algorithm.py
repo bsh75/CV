@@ -11,7 +11,7 @@ from drawFunctions import *
 from peripheralFunctions import *
 from geoLocationFunctions import *
 
-def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo):
+def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw):
     """Function processes a single video file: 'file' to display and save depending on
     'save', 'scatt', and 'litres'. The chosen thresholds are also applied"""
     
