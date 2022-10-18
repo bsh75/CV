@@ -26,7 +26,7 @@ def init_Camera(raw, windows):
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' ')) 
     return cap
 
-def getBlurSize(specs):
+def getBlurSize(specs, blurKdiameter):
     """Function uses the drone height and camera specs to specifiy kernel size
         NOTE: Either Vertical or Horizontal could be used.
         NOTE: Calibration of DIAMETER is required so it matches area of effect of water,
@@ -37,14 +37,13 @@ def getBlurSize(specs):
     HFOV = specs[2]
     VFOV = specs[3]
     # One method from online data
-    DIAMETER = 0.5 #m estimated diameter of the drop radius
     h = getDroneHeight() #m
     # Horizontal
     spanX = np.tan(HFOV/2)*h*2
-    dH = int(width*DIAMETER/spanX)
+    dH = int(width*blurKdiameter/spanX)
     # Vertical
     spanY = np.tan(VFOV/2)*h*2
-    dV = int(height*DIAMETER/spanY)
+    dV = int(height*blurKdiameter/spanY)
     return dH
 
 

@@ -5,7 +5,7 @@ import numpy as np
 def getDroneHeight():
     """Returns the height of the drone above point in center of frame in practice 
     this will be the function that recieves height from drone onboard computer"""
-    height = 2.4 #m
+    height = 4.4 #m
     return height
 
 def GIMBALsendTarget(pixDistance, angle):

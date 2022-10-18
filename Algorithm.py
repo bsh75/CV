@@ -11,7 +11,7 @@ from drawFunctions import *
 from peripheralFunctions import *
 from geoLocationFunctions import *
 
-def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw):
+def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw):
     """Function processes a single video file: 'file' to display and save depending on
     'save', 'scatt', and 'litres'. The chosen thresholds are also applied"""
     
@@ -22,33 +22,36 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
     minDropSize = 5 #L For determining if the blurred area is significant enough to target
     distThresh = 0.5 # Distance threshold for target drop trigger
 
-    maskMultiplier = 4 # Size of mask radius = maskMultiplier*blurKsize
+    # Blur kernel diameter in meters
+    blurKdiameter = 0.5
+    
+    # Size of mask radius = maskMultiplier*blurKsize
+    maskMultiplier = 3 
 
-    # Median filter
+    # Median filter initialisation
     N = 5 # Length of median filter buffer
     targetValList = []
     targetLocList = []
 
-    # Run types
-    # windows = True # Set to true if running on a windows computer
-    # raw = True # If the initialised file is using the raw 16bit data format
-
-    # Initialising flags
+    # Initialising targetID flags
     targetAquired = False
-    weightedCOMavg = False # Not a flag just needs a default of False
-
+    weightedCOMavg = False
+    first = True # Used to ensure the current frame is set to old frame on first sighting only
 
     # Initialise the file
     if (file == 'Camera'):
         cap = init_Camera(raw, windows)
     else:
         cap = init_file(file) # for live operation or video capture: use init_fileCapture(raw, windows)
+
+    # Camera Specifications
     width = int(cap.get(3))
     height = int(cap.get(4))
     HFOV = 50 *np.pi/180 # convert 50 deg to radians
     VFOV = HFOV/5*4 # Ratio of pixel width to height
     camSpecs = [width, height, HFOV, VFOV]
 
+    # If saving output frame then create file names and out object
     if save:
         # Filename the video will be saved as. String plus the name of the file being processed
         if (file == 'Camera'):
@@ -61,6 +64,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
     
         out = cv2.VideoWriter(saveName, -1, 20.0, (width,height))
     
+    # Main Loop
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -70,36 +74,36 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
         # Convert to Grayscale and apply the thresholds
         frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         retval, frameTmild = cv2.threshold(frameG, mildThresh, 9999, cv2.THRESH_TOZERO)
-        frameTMild = frameTmild
         if contours:
             retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
             retval, frameThot = cv2.threshold(frameG, hotThresh, 9999, cv2.THRESH_TOZERO)
         
-        # targetFrame is the frame that is blurred to find a target
-        targetFrame = frameTmild # Using mild threshold removes information below the threshold
+        # targetFrame is the frame that is used for blurring target ID
+        targetFrame = frameTmild # Using mild threshold sets values below 'mildThresh' to 0
         
-        # Gett blur kernel size depending on drones height readings
-        blurKsize = getBlurSize(camSpecs)
+        # Get blur kernel size depending on drones height readings and camera specifications
+        blurKsize = getBlurSize(camSpecs, blurKdiameter)
         
-        # Mask size proportional to the size of the blur kernel
+        # Mask size proportional to the size of the blur kernel 
         maskRadius = blurKsize*maskMultiplier
 
         # Keep a lookout for targets that are worth dropping on
         if not targetAquired:
-            print('no target')
+            first = True
             # Look for potential targets
-            potentialTarget, brightness, frame_CB  = targetPoint(targetFrame, blurKsize)
+            potentialTarget, brightness, frameCB  = targetPoint(targetFrame, blurKsize)
             # Check if target worth pursueing and adjust flags
             if getLitres(brightness) > minDropSize:
                 targetAquired = True
                 targetLoc = potentialTarget
-                print("target Found")
         
-        # If a target has been aquired -> track it
+        ### If a target has been aquired -> track it
         if targetAquired:
-            targetOld = targetLoc
+            if first:
+                first = False
+                targetOld = targetLoc
             
-            # apply mask around old target to prioritise finding new target near it
+            # apply mask around old target to prioritise finding new target near it (sets areas outside maskRadius to 0)
             if masking:
                 mask = np.zeros_like(targetFrame)
                 mask = cv2.circle(mask, targetOld, maskRadius, (255,255,255), -1)
@@ -107,24 +111,20 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                 targetFrame = frameMasked
 
             # Find new target
-            targetLoc, targetVal, frame_CB = targetPoint(targetFrame, blurKsize)    
-            print("blurred target")
-            targetBlurLoc = targetLoc
-            targetBlurVal = targetVal
+            targetLoc, targetVal, frameCB = targetPoint(targetFrame, blurKsize)    
+            
             
             # Find Contours and use a weighted sum of each contour COM and blurring method to find target
             if contours:
+                targetBlurLoc = targetLoc
                 blurWeight = 20
                 COMWeight = 1
-                weightedCOMavg, weightedCOMValue, contoursList = contourTargetID(frameTmild, frameTmedium, frameThot, frame_CB)
-                # print("loc: ", weightedCOMavg, targetBlurLoc)
-                # print("val: ", weightedCOMValue, targetBlurVal)
+                weightedCOMavg, weightedCOMValue, contoursList = contourTargetID(frameTmild, frameTmedium, frameThot, frameCB)
                 if weightedCOMavg:
                     targetLocX = int((blurWeight*targetBlurLoc[0] + COMWeight*weightedCOMavg[0])/(blurWeight + COMWeight))
                     targetLocY = int((blurWeight*targetBlurLoc[1] + COMWeight*weightedCOMavg[1])/(blurWeight + COMWeight))
                     targetLoc = (targetLocX, targetLocY)
-                    targetVal = frame_CB[targetLocY, targetLocX]
-                    # print("NEW VAL = ", targetVal)
+                    targetVal = frameCB[targetLocY, targetLocX]
                 
 
             # Median filtering for outlier rejection
@@ -145,6 +145,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
 
             # If target is still confirmed then Geolocate
             if targetAquired:
+                targetOld = targetLoc
                 targetLocCO = convertToCentreOrigin(targetLoc, camSpecs)
                 pixDistance = np.sqrt(targetLocCO[0]**2 + targetLocCO[1]**2) # Just wanting pixel ratios now
                 angle = angleFromFront(targetLoc, camSpecs)
@@ -157,8 +158,8 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                         litres = 'All'
                     dropWater(litres)
 
-        # Displays
-        frameOut = frame #use the unadultered frame: 'frame' to draw on (allows for colour)
+        ### Displays
+        frameOut = frameCB #use the unadultered frame: 'frame' to draw on (allows for colour)
         if DRAW:
             if contours:
                 if weightedCOMavg:
@@ -166,11 +167,11 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                     frameOut = cv2.circle(frameOut, targetBlurLoc, 3, (0, 255, 0), 3)
 
             if scatt:
-                frameOut = drawScattered(frameOut, frame_CB, camSpecs, litresDisplay)
+                frameOut = drawScattered(frameOut, frameCB, camSpecs, litresDisplay)
             
 
             if targetAquired:
-                frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
+                frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius, masking)
                 if targetInfo:
                     frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, litres, camSpecs, litresDisplay)
                 if contours:

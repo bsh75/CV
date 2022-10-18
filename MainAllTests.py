@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from CVfunctions import *
 from drawFunctions import *
-from Algorithm import singleVid
+from Algorithm import CVOperations
 from VideoCapture import vidCapture
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
@@ -27,26 +27,24 @@ Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
                 
 
 def main():
-    """Main function which sets all the flags which determine the behaviour of the algorithm.
-            -save: If the output of the video is to be saved
-            -scatt: If the grid of pixel intensities is to be overlayed
-            -litresDisplay: To display the information in terms of litres
+    """Main function which sets all the flags which determine the Mode of Operation and the features used
+            - can be set to run through files outlined above or on camera
     """
     # Operation Mode Flags
     videoCaptureF = False # Set to True to run the video capture routine
     save = False # Set to True to generate an output file
-    live = True # Set to True if running program live on a camera
+    live = False # Set to True if running program live on a camera
     ALL = False # Set to True to run through all videos consecutively
     windows = True # Set to True if running a live feed from windows OS
     raw = False # Set to True if using y16bit data (reccomended)
 
     # Feature Flags
-    masking = True # Set to True to use masking when tracking the target
-    contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
-    DRAW = True # Set to True to allow drawing functions to act
-    scatt = True # Set to True to display a grid of values over the frame
-    targetInfo = True # Set to True to display target information
-    litresDisplay = True # Set to True to display information in terms of drop quantities
+    masking = False # Set to True to use masking when tracking the target
+    contours = False # Set to True if wanting to use a weighted average of contour COM in Target ID
+    DRAW = True # Set to True to allow drawing functions
+    scatt = False # Set to True to display a grid of values over the frame
+    targetInfo = False # Set to True to display target information
+    litresDisplay = True # Set to True to display scatt values and targetInfo in terms of drop quantities (using getLitres())
 
     # If just wanting to capture and record video for later analysis
     if videoCaptureF:
@@ -56,13 +54,13 @@ def main():
             for files in Y16TestData:
                 for file in files:
 
-                    singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
+                    CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
         else:
             if live:
                 file = 'Camera'
             else:
                 # Select single file to play using array indexing
-                file = Y16TestData[5][1]
-            singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
+                file = Y16TestData[4][0]
+            CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
 
 main()

@@ -69,14 +69,15 @@ def drawScattered(frame, frameVals, specs, litresDisplay):
         points.append(row)   
     return frame
 
-def drawCircles(frame, targetLoc, blurKsize, maskRadius):
+def drawCircles(frame, targetLoc, blurKsize, maskRadius, masking):
     """Draws circles on the frame representing the Blur Kernel, 
         Target Localisation Mask and the Target Point"""
     thickness = 1
     colour = (0, 0, 0)
     cv2.circle(frame, targetLoc, 3, colour, thickness)
     cv2.circle(frame, targetLoc, blurKsize, colour, thickness)
-    cv2.circle(frame, targetLoc, maskRadius, colour, thickness)
+    if masking:
+        cv2.circle(frame, targetLoc, maskRadius, colour, thickness)
     return frame
 
 def drawContours(frame, contourList, thicknessList):
