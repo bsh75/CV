@@ -9,6 +9,7 @@ import numpy as np
 from CVfunctions import *
 from drawFunctions import *
 from Algorithm import singleVid
+from VideoCapture import vidCapture
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
             ['./Medium/NormVid.mp4', './Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
@@ -39,21 +40,26 @@ def main():
     masking = False # Set to True to use masking when finding the 
     contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
     targetInfo = True
-    # Read the raw Y16 data from the camera
     ALL = False # Set to True to run through all videos consecutively
     DRAW = True
-    if ALL:
-        for files in Y16TestData:
-            for file in files:
 
-                singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
+    # If just wanting to capture and record video for later analysis
+    videoCaptureF = False
+    if videoCaptureF:
+        vidCapture()
     else:
-        if live:
-            file = 'Camera'
+        if ALL:
+            for files in Y16TestData:
+                for file in files:
+
+                    singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
         else:
-            # Select single file to play using array indexing
-            file = Y16TestData[5][1]
-        singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
+            if live:
+                file = 'Camera'
+            else:
+                # Select single file to play using array indexing
+                file = Y16TestData[5][1]
+            singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
 
 main()
 

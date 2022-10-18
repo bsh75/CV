@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from CVfunctions import init_Camera
 
-def main():
+def vidCapture():
     """Main function which switches between raw and normal feeds
         Is used to save videos to the computer for post-processing"""
     run = True
