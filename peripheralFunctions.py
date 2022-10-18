@@ -8,7 +8,7 @@ def getDroneHeight():
     height = 2.4 #m
     return height
 
-def GIMBALsendTarget(pixDistance, angle, frameWidth, frameHeight):
+def GIMBALsendTarget(pixDistance, angle):
     """Send the bearing and heading to GIMBAL and return an actual distance calculation"""
     # For now just use trigonometric flat ground approximation
     distance = 5# distApprox(pixDistance, angle, frameWidth, frameHeight)
@@ -16,9 +16,17 @@ def GIMBALsendTarget(pixDistance, angle, frameWidth, frameHeight):
 
 def dropWater(amountL):
     """Send the drop command to the valve to release water"""
-    print("DROPPING - DROPPING - DROPPING - DROPPING - DROPPING - DROPPING")
+    if amountL == 'All':
+        print("DROPPING ALL - DROPPING ALL")
+        # And then return home
+    else:
+        print("Dropping: ", amountL, "Litres")
     return None
 
 def sendInfoToSA200(distance, angle):
     """Function which sends the bearing and heading information to SA200"""
+    return None
+
+def getWaterLevel():
+    """Function which will recieve the value of the water level"""
     return None

@@ -1,12 +1,14 @@
 import numpy as np
 from peripheralFunctions import getDroneHeight
 
-def angleFromFront(coordOriginal, width, height):
+def angleFromFront(coordOriginal, specs):
     """Returns the angle of to the target point with 0degrees being directly infront,
     +ve 0-180 on the right and -ve 0-180 on the left 
     """
+    width = specs[0]
+    height = specs[1]
     # First the coordinate must be converted to a Center Origin Frame
-    coord = convertToCentreOrigin(coordOriginal, width, height)
+    coord = convertToCentreOrigin(coordOriginal, specs)
     # Now find the Angle to coordinate
     if coord[1] == 0:
         if coord[0] > 0:
@@ -22,25 +24,28 @@ def angleFromFront(coordOriginal, width, height):
             angle += np.pi
     return angle
 
-def distApprox(pixDistance, theta, frameWidth, frameHeight):
+def distApprox(pixDistance, theta, specs):
     """Approximates the distance to the hotspots using flat ground approximation, drone height the camera specifications"""
+    width = specs[0]
+    height = specs[1]
+    HFOV = specs[2]
+    VFOV = specs[3]
     # Get drone height for calculations
     h = getDroneHeight()
-    # From flir boson camera specs
-    HFOV = 88.28/100*h # From data provided online
-    VFOV = 77.62/100*h # From data provided online
     # Pixel ratio is the fraction of the screen that the distance takes up in x or y
-    pixRatioX = pixDistance*np.sin(theta)/frameWidth
-    pixRatioY = pixDistance*np.cos(theta)/frameHeight
-    # spanX = 2 * h * np.tan(camAngleX) (= HFOV)
-    # spanY = 2 * h * np.tan(camAngleY) (= VFOV)
-    dxGuess = pixRatioX * HFOV
-    dyGuess = pixRatioY * VFOV
+    pixRatioX = pixDistance*np.sin(theta)/width
+    pixRatioY = pixDistance*np.cos(theta)/height
+    spanX = 2 * h * np.tan(HFOV)
+    spanY = 2 * h * np.tan(VFOV)
+    dxGuess = pixRatioX * spanX
+    dyGuess = pixRatioY * spanY
     dGuess = round(np.sqrt(dxGuess**2 + dyGuess**2), 1) # Estimate based on drone height
     return dGuess
 
-def convertToCentreOrigin(originalCoord, width, height):
+def convertToCentreOrigin(originalCoord, specs):
     """Converts a coordinate in Top Left Origin reference to a Centre Frame Origin referecnce"""
+    width = specs[0]
+    height = specs[1]
     centerLoc = (int(width/2), int(height/2))
     dxP = originalCoord[0] - centerLoc[0]
     dyP = -(originalCoord[1] - centerLoc[1])

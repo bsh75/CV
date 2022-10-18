@@ -26,23 +26,25 @@ def init_fileCapture(raw, windows):
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' ')) 
     return cap
 
-def getBlurSize(width, height):
+def getBlurSize(specs):
     """Function uses the drone height and camera specs to specifiy kernel size
         NOTE: Either Vertical or Horizontal could be used.
         NOTE: Calibration of DIAMETER is required so it matches area of effect of water,
         this could also be done dynamically depeneding on the amount of estimated water 
         to drop in previous frame"""
+    width = specs[0]
+    height = specs[1]
+    HFOV = specs[2]
+    VFOV = specs[3]
     # One method from online data
     DIAMETER = 0.5 #m estimated diameter of the drop radius
     h = getDroneHeight() #m
     # Horizontal
-    HFOV = 50 *np.pi/180 # convert 50 deg to radians
-    NH = np.tan(HFOV/2)*h*2
-    dH = int(width*DIAMETER/NH)
+    spanX = np.tan(HFOV/2)*h*2
+    dH = int(width*DIAMETER/spanX)
     # Vertical
-    VFOV = HFOV/5*4 # Ratio of pixel width to height
-    NV = np.tan(VFOV/2)*h*2
-    dV = int(height*DIAMETER/NV)
+    spanY = np.tan(VFOV/2)*h*2
+    dV = int(height*DIAMETER/spanY)
     return dH
 
 

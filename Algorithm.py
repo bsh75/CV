@@ -11,21 +11,6 @@ from drawFunctions import *
 from peripheralFunctions import *
 from geoLocationFunctions import *
 
-NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
-            ['./Medium/NormVid.mp4', './Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
-            ['./Large/NormVid.mp4', './Large/NormVidAfter.mp4'],
-            ['./Log1/NormVid.mp4', './Log1/NormVidAfter.mp4'],
-            ['./Log2/NormVid.mp4', './Log2/NormVidAfter.mp4'],
-            ['./Main/Norm1.mp4', './Main/Norm2.mp4', './Main/NormVid.mp4']]
-
-Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
-                ['./Medium/RawVid.mp4', './Medium/RawVidAfter.mp4'],
-                ['./Large/RawVid.mp4',  './Large/RawVidAfter.mp4'],
-                ['./Log1/RawVid.mp4', './Log1/RawVidAfter.mp4'],
-                ['./Log2/RawVid.mp4', './Log2/RawVidAfter.mp4'],
-                ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidHandheldBefore.mp4']]
-                
-
 def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo):
     """Function processes a single video file: 'file' to display and save depending on
     'save', 'scatt', and 'litres'. The chosen thresholds are also applied"""
@@ -56,6 +41,9 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
     cap = init_file(file) # for live operation or video capture: use init_fileCapture(raw, windows)
     width = int(cap.get(3))
     height = int(cap.get(4))
+    HFOV = 50 *np.pi/180 # convert 50 deg to radians
+    VFOV = HFOV/5*4 # Ratio of pixel width to height
+    camSpecs = [width, height, HFOV, VFOV]
 
     if save:
         # Filename the video will be saved as. String plus the name of the file being processed
@@ -80,7 +68,7 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
         targetFrame = frameTmild # Using mild threshold removes information below the threshold
         
         # Gett blur kernel size depending on drones height readings
-        blurKsize = getBlurSize(width, height)
+        blurKsize = getBlurSize(camSpecs)
         
         # Mask size proportional to the size of the blur kernel
         maskRadius = blurKsize*maskMultiplier
@@ -146,14 +134,16 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
 
             # If target is still confirmed then Geolocate
             if targetAquired:
-                targetLocCO = convertToCentreOrigin(targetLoc, width, height)
+                targetLocCO = convertToCentreOrigin(targetLoc, camSpecs)
                 pixDistance = np.sqrt(targetLocCO[0]**2 + targetLocCO[1]**2) # Just wanting pixel ratios now
-                angle = angleFromFront(targetLoc, width, height)
-                distance = GIMBALsendTarget(pixDistance, angle, width, height)
+                angle = angleFromFront(targetLoc, camSpecs)
+                distance = GIMBALsendTarget(pixDistance, angle)
                 sendInfoToSA200(distance, angle)
                 litres = getLitres(targetVal)
                 # If close enough to target then drop the water
                 if distance <= distThresh:
+                    if getWaterLevel() < litres:
+                        litres = 'All'
                     dropWater(litres)
 
         # Displays
@@ -165,17 +155,17 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
                     frameOut = cv2.circle(frameOut, targetBlurLoc, 3, (0, 255, 0), 3)
 
             if scatt:
-                frameOut = drawScatteredWeights(frameOut, frame_CB, width, height, litresDisplay)
+                frameOut = drawScattered(frameOut, frame_CB, camSpecs, litresDisplay)
             
 
             if targetAquired:
                 frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius)
                 if targetInfo:
-                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, width, height, litres, litresDisplay)
+                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, litres, camSpecs, litresDisplay)
                 if contours:
                     frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
             
-            frameOut = drawRefFrame(frameOut, width, height)
+            frameOut = drawRefFrame(frameOut, camSpecs)
 
         ###################################
         if save:
