@@ -10,7 +10,7 @@ def vidCapture(save, windows, raw):
     """Main function which switches between raw and normal feeds
         Is used to save videos to the computer for post-processing"""
     run = True
-
+    raw = True
     while run:
         # Read the raw Y16 data from the camera
         cap = init_Camera(raw, windows)
@@ -42,9 +42,9 @@ def vidCapture(save, windows, raw):
                 break
         # Release the video file, and close the GUI.
         cap.release()
-        out.release()
+        if save:
+            out.release()
 
 
     cv2.destroyAllWindows()
     
-main()

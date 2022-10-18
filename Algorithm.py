@@ -24,18 +24,19 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
 
     maskMultiplier = 4 # Size of mask radius = maskMultiplier*blurKsize
 
+    # Median filter
+    N = 5 # Length of median filter buffer
+    targetValList = []
+    targetLocList = []
+
     # Run types
-    windows = True # Set to true if running on a windows computer
-    raw = True # If the initialised file is using the raw 16bit data format
+    # windows = True # Set to true if running on a windows computer
+    # raw = True # If the initialised file is using the raw 16bit data format
 
     # Initialising flags
     targetAquired = False
     weightedCOMavg = False # Not a flag just needs a default of False
 
-    # Median filter
-    N = 5 # Length of median filter buffer
-    targetValList = []
-    targetLocList = []
 
     # Initialise the file
     if (file == 'Camera'):
@@ -50,7 +51,14 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
 
     if save:
         # Filename the video will be saved as. String plus the name of the file being processed
-        saveName = 'AllImg'+file.split('/')[1]+file.split('/')[2] #./drawOnCntNum/
+        if (file == 'Camera'):
+            if raw:
+                saveName = 'rawCamera.mp4' #./drawOnCntNum/
+            else:
+                saveName = 'NormCamera.mp4'
+        else:
+            saveName = 'AllImg'+file.split('/')[1]+file.split('/')[2] #./drawOnCntNum/
+    
         out = cv2.VideoWriter(saveName, -1, 20.0, (width,height))
     
     while cap.isOpened():

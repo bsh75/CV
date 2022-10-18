@@ -32,23 +32,25 @@ def main():
             -scatt: If the grid of pixel intensities is to be overlayed
             -litresDisplay: To display the information in terms of litres
     """
-    # Flags
-    live = False
-    save = False
-    scatt = True # Set to True to display a grid of values over the frame
-    litresDisplay = False # Set to True to display information in terms of drop quantities
-    masking = False # Set to True to use masking when finding the 
-    contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
-    targetInfo = True
+    # Operation Mode Flags
+    videoCaptureF = False # Set to True to run the video capture routine
+    save = False # Set to True to generate an output file
+    live = True # Set to True if running program live on a camera
     ALL = False # Set to True to run through all videos consecutively
-    DRAW = True
-    windows = True
-    raw = True
+    windows = True # Set to True if running a live feed from windows OS
+    raw = False # Set to True if using y16bit data (reccomended)
+
+    # Feature Flags
+    masking = True # Set to True to use masking when tracking the target
+    contours = True # Set to True if wanting to use a weighted average of contour COM in Target ID
+    DRAW = True # Set to True to allow drawing functions to act
+    scatt = True # Set to True to display a grid of values over the frame
+    targetInfo = True # Set to True to display target information
+    litresDisplay = True # Set to True to display information in terms of drop quantities
 
     # If just wanting to capture and record video for later analysis
-    videoCaptureF = False
     if videoCaptureF:
-        vidCapture(save, windows)
+        vidCapture(save, windows, raw)
     else:
         if ALL:
             for files in Y16TestData:
@@ -64,5 +66,3 @@ def main():
             singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo, windows, raw)
 
 main()
-
-"""Make a global CLASS for the camera from which to input all its characteristics"""
