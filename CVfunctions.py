@@ -11,7 +11,7 @@ def init_file(file):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     return cap
 
-def init_fileCapture(raw, windows):
+def init_Camera(raw, windows):
     """Load the video file depending on what mode is required, used for saving videos or  live
         NOTE: cv2.CAP_DSHOW is only neccessary for windows OS"""
     device_index = 1 # for Boson in USB port

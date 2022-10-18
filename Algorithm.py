@@ -38,7 +38,10 @@ def singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetI
     targetLocList = []
 
     # Initialise the file
-    cap = init_file(file) # for live operation or video capture: use init_fileCapture(raw, windows)
+    if (file == 'Camera'):
+        cap = init_Camera(raw, windows)
+    else:
+        cap = init_file(file) # for live operation or video capture: use init_fileCapture(raw, windows)
     width = int(cap.get(3))
     height = int(cap.get(4))
     HFOV = 50 *np.pi/180 # convert 50 deg to radians

@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from CVfunctions import *
 from drawFunctions import *
-from Main import singleVid
+from Algorithm import singleVid
 
 NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
             ['./Medium/NormVid.mp4', './Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
@@ -32,6 +32,7 @@ def main():
             -litresDisplay: To display the information in terms of litres
     """
     # Flags
+    live = False
     save = False
     scatt = True # Set to True to display a grid of values over the frame
     litresDisplay = False # Set to True to display information in terms of drop quantities
@@ -47,8 +48,11 @@ def main():
 
                 singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
     else:
-        # Select single file to play using array indexing
-        file = Y16TestData[5][1]
+        if live:
+            file = 'Camera'
+        else:
+            # Select single file to play using array indexing
+            file = Y16TestData[5][1]
         singleVid(file, save, DRAW, scatt, litresDisplay, masking, contours, targetInfo)
 
 main()

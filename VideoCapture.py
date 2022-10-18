@@ -4,7 +4,7 @@ Written by Brett Hockey"""
 
 import cv2
 import numpy as np
-from CVfunctions import init_fileCapture
+from CVfunctions import init_Camera
 
 def main():
     """Main function which switches between raw and normal feeds
@@ -13,10 +13,11 @@ def main():
     raw = True
     save = True
     rawThresh = 110
+    windows = False
 
     while run:
         # Read the raw Y16 data from the camera
-        cap = init_fileCapture(raw)
+        cap = init_Camera(raw, windows)
         if save:
             fourcc = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X') # Unsure what this does atm but may be needed for Rasberry Pi
             if raw:
