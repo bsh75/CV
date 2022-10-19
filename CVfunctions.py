@@ -131,6 +131,7 @@ def getLitres(targetVal, waterLevel):
     """Relationship between pixel value and drop quantity"""
     # if targetVal = 250 (approx maximum) then drop whole amount
     L = waterLevel * targetVal / 250
+    print(targetVal,"....", L)
     return L
 
 

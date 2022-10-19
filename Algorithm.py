@@ -174,7 +174,7 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
         if DRAW:
 
             if scatt:
-                frameOut = drawScattered(frameOut, frameCB, camSpecs, litresDisplay)
+                frameOut = drawScattered(frameOut, frameCB, camSpecs, litresDisplay, waterLevel)
             
 
             if targetAquired:

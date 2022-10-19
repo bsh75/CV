@@ -29,5 +29,5 @@ def sendInfoToSA200(distance, angle):
 
 def getWaterLevel():
     """Function which will recieve the value of the water level"""
-    waterLevel = 200
+    waterLevel = 20
     return waterLevel

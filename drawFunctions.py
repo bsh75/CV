@@ -44,7 +44,7 @@ def drawTargetInfo(frame, targetLoc, dGuess, theta, weighting, Litres, specs, li
     cv2.line(frame, centerLoc, targetLoc, colour, thickness)
     return frame
 
-def drawScattered(frame, frameVals, specs, litresDisplay):
+def drawScattered(frame, frameVals, specs, litresDisplay, waterLevel):
     """Display the Weighting or Litres from a distribution of points in the frame"""
     width = specs[0]
     height = specs[1]
@@ -61,7 +61,7 @@ def drawScattered(frame, frameVals, specs, litresDisplay):
         for y in Y[1:-1]:
             newPoint = (y, x)
             if litresDisplay:
-                newWeight = getLitres(frameVals[x][y])
+                newWeight = getLitres(frameVals[x][y], waterLevel)
             else:
                 newWeight = frameVals[x][y]
             row.append(newPoint)
