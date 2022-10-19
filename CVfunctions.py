@@ -1,7 +1,8 @@
 import cv2
+from cv2 import blur
 import numpy as np
 from peripheralFunctions import getDroneHeight
-
+from waterDropRelationship import kdiamModel, params
 def init_file(file):
     """Load the video file depending on which mode is required"""
     # deviceIndex = file
@@ -26,12 +27,15 @@ def init_Camera(raw, windows):
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('Y','1','6',' ')) 
     return cap
 
-def getBlurSize(specs, blurKdiameter):
-    """Function uses the drone height and camera specs to specifiy kernel size
+
+def getBlurSize(specs, waterLevel):
+    """Function uses the drone height and camera specs to specifiy kernel size (also used for )
         NOTE: Either Vertical or Horizontal could be used.
         NOTE: Calibration of DIAMETER is required so it matches area of effect of water,
-        this could also be done dynamically depeneding on the amount of estimated water 
-        to drop in previous frame"""
+        this is done dynamically depeneding on the amount of estimated water in tank"""
+    # Estimated relationship between water level and area of effect of water
+    blurKdiameter = kdiamModel(waterLevel, *params)
+    print(blurKdiameter)
     width = specs[0]
     height = specs[1]
     HFOV = specs[2]
@@ -46,6 +50,25 @@ def getBlurSize(specs, blurKdiameter):
     dV = int(height*blurKdiameter/spanY)
     return dH
 
+def getMaskSize(specs, maskDiameter):
+    """Function uses the drone height and camera specs to specifiy kernel size (also used for )
+        NOTE: Either Vertical or Horizontal could be used.
+        NOTE: Calibration of DIAMETER is required so it matches area of effect of water,
+        this is done dynamically depeneding on the amount of estimated water in tank"""
+    # Estimated relationship between water level and area of effect of water
+    width = specs[0]
+    height = specs[1]
+    HFOV = specs[2]
+    VFOV = specs[3]
+    # One method from online data
+    h = getDroneHeight() #m
+    # Horizontal
+    spanX = np.tan(HFOV/2)*h*2
+    dH = int(width*maskDiameter/spanX)
+    # Vertical
+    spanY = np.tan(VFOV/2)*h*2
+    dV = int(height*maskDiameter/spanY)
+    return dH
 
 def targetPoint(frame, blurKsize):
     """Finds the brightest point in the frame averaged by the a circular kernal with size of spread of water"""
@@ -104,11 +127,10 @@ def contourN(frame, minA, N):
             AList.append(max1[0])
     return AList, CList
 
-def getLitres(targetVal):
+def getLitres(targetVal, waterLevel):
     """Relationship between pixel value and drop quantity"""
-    L = int(0.1 * targetVal)
-    if L < 0:
-        L = 0
+    # if targetVal = 250 (approx maximum) then drop whole amount
+    L = waterLevel * targetVal / 250
     return L
 
 
@@ -157,7 +179,7 @@ def contourTargetID(frameMild, frameMedium, frameHot, frameCB):
     if len(areasHot) > 0:
         areasHotMaxIndex = areasHot.index(max(areasHot))
         COMhotMax = contourCOM(contoursHot[areasHotMaxIndex])
-        hotWeight = 20
+        hotWeight = 10
     else:
         COMhotMax = (0, 0)
         hotWeight = 0
@@ -182,5 +204,6 @@ def contourTargetID(frameMild, frameMedium, frameHot, frameCB):
         COMsMild.append(contourCOM(cMi))
         
     contoursList = [contoursMild, contoursMedium, contoursHot]
+    contourCOMsL = [COMhotMax, COMmediumMax, COMmildMax]
 
-    return weightedCOMavg, weightedCOMValue, contoursList
+    return weightedCOMavg, weightedCOMValue, contoursList, contourCOMsL

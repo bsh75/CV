@@ -5,7 +5,7 @@ import numpy as np
 def getDroneHeight():
     """Returns the height of the drone above point in center of frame in practice 
     this will be the function that recieves height from drone onboard computer"""
-    height = 4.4 #m
+    height = 8.4 #m
     return height
 
 def GIMBALsendTarget(pixDistance, angle):
@@ -29,4 +29,5 @@ def sendInfoToSA200(distance, angle):
 
 def getWaterLevel():
     """Function which will recieve the value of the water level"""
-    return None
+    waterLevel = 200
+    return waterLevel

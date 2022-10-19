@@ -22,11 +22,12 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
     minDropSize = 5 #L For determining if the blurred area is significant enough to target
     distThresh = 0.5 # Distance threshold for target drop trigger
 
-    # Blur kernel diameter in meters
-    blurKdiameter = 0.5
+    # Contour and Bluring weightings
+    blurWeight = 5
+    COMWeight = 1
     
-    # Size of mask radius = maskMultiplier*blurKsize
-    maskMultiplier = 3 
+    # Size of mask radius
+    maskDiameter = 1.5
 
     # Median filter initialisation
     N = 5 # Length of median filter buffer
@@ -72,7 +73,7 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
         
         ######## CV PROCESSING BELOW ########
         # Convert to Grayscale and apply the thresholds
-        frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # now just assigned value from 0-255
         retval, frameTmild = cv2.threshold(frameG, mildThresh, 9999, cv2.THRESH_TOZERO)
         if contours:
             retval, frameTmedium = cv2.threshold(frameG, mediumThresh, 9999, cv2.THRESH_TOZERO)
@@ -81,19 +82,24 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
         # targetFrame is the frame that is used for blurring target ID
         targetFrame = frameTmild # Using mild threshold sets values below 'mildThresh' to 0
         
+        # Get water level amount
+        waterLevel = getWaterLevel()
+        if waterLevel < 2* minDropSize:
+            lastDrop = True
+
         # Get blur kernel size depending on drones height readings and camera specifications
-        blurKsize = getBlurSize(camSpecs, blurKdiameter)
+        blurKsize = getBlurSize(camSpecs, waterLevel)
         
         # Mask size proportional to the size of the blur kernel 
-        maskRadius = blurKsize*maskMultiplier
+        maskRadius = getMaskSize(camSpecs, maskDiameter)
 
         # Keep a lookout for targets that are worth dropping on
         if not targetAquired:
             first = True
             # Look for potential targets
-            potentialTarget, brightness, frameCB  = targetPoint(targetFrame, blurKsize)
+            potentialTarget, intensity, frameCB  = targetPoint(targetFrame, blurKsize)
             # Check if target worth pursueing and adjust flags
-            if getLitres(brightness) > minDropSize:
+            if getLitres(intensity, waterLevel) > minDropSize:
                 targetAquired = True
                 targetLoc = potentialTarget
         
@@ -117,9 +123,7 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
             # Find Contours and use a weighted sum of each contour COM and blurring method to find target
             if contours:
                 targetBlurLoc = targetLoc
-                blurWeight = 20
-                COMWeight = 1
-                weightedCOMavg, weightedCOMValue, contoursList = contourTargetID(frameTmild, frameTmedium, frameThot, frameCB)
+                weightedCOMavg, weightedCOMValue, contoursList, COMS = contourTargetID(frameTmild, frameTmedium, frameThot, frameCB)
                 if weightedCOMavg:
                     targetLocX = int((blurWeight*targetBlurLoc[0] + COMWeight*weightedCOMavg[0])/(blurWeight + COMWeight))
                     targetLocY = int((blurWeight*targetBlurLoc[1] + COMWeight*weightedCOMavg[1])/(blurWeight + COMWeight))
@@ -138,7 +142,7 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
                 targetLoc = medianFilterCoord(targetLocList)
                 targetVal = medianFilterVal(targetValList)
             # If the new target found within the mask is not significant enough go back to searching
-            if getLitres(targetVal) < minDropSize:
+            if getLitres(targetVal, waterLevel) < minDropSize:
                 targetAquired = False
                 targetValList = []
                 targetLocList = []
@@ -151,20 +155,23 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
                 angle = angleFromFront(targetLoc, camSpecs)
                 distance = GIMBALsendTarget(pixDistance, angle)
                 sendInfoToSA200(distance, angle)
-                litres = getLitres(targetVal)
+                litres = getLitres(targetVal, waterLevel)
                 # If close enough to target then drop the water
                 if distance <= distThresh:
-                    if getWaterLevel() < litres:
+                    if getWaterLevel() < litres or lastDrop:
                         litres = 'All'
                     dropWater(litres)
 
-        ### Displays
-        frameOut = frameCB #use the unadultered frame: 'frame' to draw on (allows for colour)
+        frameOut = frame
+        # ### Displays
+        # if targetAquired:
+        #     mask = np.zeros_like(frame)
+        #     mask = cv2.circle(mask, targetLoc, maskRadius, (255,255,255), -1)
+        #     frameOut = cv2.bitwise_and(frame, mask, True) #frame #use the unadultered frame: 'frame' to draw on (allows for colour)
+        # for i in range(0, len(COMS)):
+        #     frameOut = cv2.circle(frameOut, COMS[i], 8-2*i, (0, 0, 255), -1)
+
         if DRAW:
-            if contours:
-                if weightedCOMavg:
-                    frameOut = cv2.circle(frameOut, weightedCOMavg, 3, (0, 0, 255), 3)
-                    frameOut = cv2.circle(frameOut, targetBlurLoc, 3, (0, 255, 0), 3)
 
             if scatt:
                 frameOut = drawScattered(frameOut, frameCB, camSpecs, litresDisplay)
@@ -172,11 +179,15 @@ def CVOperations(file, save, DRAW, scatt, litresDisplay, masking, contours, targ
 
             if targetAquired:
                 frameOut = drawCircles(frameOut, targetLoc, blurKsize, maskRadius, masking)
-                if targetInfo:
-                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, litres, camSpecs, litresDisplay)
                 if contours:
                     frameOut = drawContours(frameOut, contoursList, thicknessList=[1, 2, 3])
+                if targetInfo:
+                    frameOut = drawTargetInfo(frameOut, targetLoc, pixDistance, angle, targetVal, litres, camSpecs, litresDisplay)
             
+            if contours:
+                if weightedCOMavg:
+                    frameOut = cv2.circle(frameOut, weightedCOMavg, 3, (0, 255, 0), 3)
+                    frameOut = cv2.circle(frameOut, targetBlurLoc, 3, (255, 0, 0), 3)
             frameOut = drawRefFrame(frameOut, camSpecs)
 
         ###################################
