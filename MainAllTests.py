@@ -11,19 +11,19 @@ from drawFunctions import *
 from Algorithm import CVOperations
 from VideoCapture import vidCapture
 
-NormalTestData = [['./Small/NormVid.mp4', './Small/NormVidAfter.mp4'],
-            ['./Medium/NormVid.mp4', './Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
-            ['./Large/NormVid.mp4', './Large/NormVidAfter.mp4'],
-            ['./Log1/NormVid.mp4', './Log1/NormVidAfter.mp4'],
-            ['./Log2/NormVid.mp4', './Log2/NormVidAfter.mp4'],
-            ['./Main/Norm1.mp4', './Main/Norm2.mp4', './Main/NormVid.mp4']]
+NormalTestData = [['./Data/Small/NormVid.mp4', './Data/Small/NormVidAfter.mp4'],
+            ['./Data/Medium/NormVid.mp4', './Data/Medium/NormVidAfter.mp4', './Medium/RawVidAfter.mp4'],
+            ['./Data/Large/NormVid.mp4', './Data/Large/NormVidAfter.mp4'],
+            ['./Data/Log1/NormVid.mp4', './Data/Log1/NormVidAfter.mp4'],
+            ['./Data/Log2/NormVid.mp4', './Data/Log2/NormVidAfter.mp4'],
+            ['./Data/Main/Norm1.mp4', './Data/Main/Norm2.mp4', './Data/Main/NormVid.mp4']]
 
-Y16TestData = [['./Small/RawVid.mp4', './Small/RawVidAfter.mp4'],
-                ['./Medium/RawVid.mp4', './Medium/RawVidAfter.mp4'],
-                ['./Large/RawVid.mp4',  './Large/RawVidAfter.mp4'],
-                ['./Log1/RawVid.mp4', './Log1/RawVidAfter.mp4'],
-                ['./Log2/RawVid.mp4', './Log2/RawVidAfter.mp4'],
-                ['./Main/Raw1.mp4', './Main/Raw2.mp4', './Main/RawVid.mp4', './Main/RawVidHandheldAfter.mp4', './Main/RawVidHandheldBefore.mp4']]
+Y16TestData = [['./Data/Small/RawVid.mp4', './Data/Small/RawVidAfter.mp4'],
+                ['./Data/Medium/RawVid.mp4', './Data/Medium/RawVidAfter.mp4'],
+                ['./Data/Large/RawVid.mp4',  './Data/Large/RawVidAfter.mp4'],
+                ['./Data/Log1/RawVid.mp4', './Data/Log1/RawVidAfter.mp4'],
+                ['./Data/Log2/RawVid.mp4', './Data/Log2/RawVidAfter.mp4'],
+                ['./Data/Main/Raw1.mp4', './Data/Main/Raw2.mp4', './Data/Main/RawVid.mp4', './Data/Main/RawVidHandheldAfter.mp4', './Data/Main/RawVidHandheldBefore.mp4']]
                 
 
 def main():

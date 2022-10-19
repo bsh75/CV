@@ -35,7 +35,6 @@ def getBlurSize(specs, waterLevel):
         this is done dynamically depeneding on the amount of estimated water in tank"""
     # Estimated relationship between water level and area of effect of water
     blurKdiameter = kdiamModel(waterLevel, *params)
-    print(blurKdiameter)
     width = specs[0]
     height = specs[1]
     HFOV = specs[2]
@@ -131,7 +130,6 @@ def getLitres(targetVal, waterLevel):
     """Relationship between pixel value and drop quantity"""
     # if targetVal = 250 (approx maximum) then drop whole amount
     L = waterLevel * targetVal / 250
-    print(targetVal,"....", L)
     return L
 
 
